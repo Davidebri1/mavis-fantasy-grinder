@@ -78,14 +78,14 @@ export const DATA_FACTS: DataFact[] = [
  * appear.
  */
 export const ESTIMATE_NOTICE =
-  "Salaries are DraftKings' own published prices; a player with no published price says Pending, and the modelled price sits in its own 'Est. salary' column. Projections are modelled from live ESPN data unless the slate carries DraftKings' own.";
+  "No DraftKings price published: Pending, with the modelled price in Est. salary. Projections modelled from ESPN unless the slate carries DK's own.";
 
 /**
  * What the app says when a slate has no published prices at all. It is the
  * difference between a tool that will do its job and one that cannot.
  */
 export const PRICES_MISSING_NOTICE =
-  "This slate has no published DraftKings prices. Without a real price there is no salary cap to balance and no lineup worth entering. Import the DraftKings file for this slate, or wait for the DraftKings slate to load.";
+  "Import the DraftKings file for this slate — no published prices yet.";
 
 /**
  * The notice for a sample roster. Loud on purpose: the customer must never

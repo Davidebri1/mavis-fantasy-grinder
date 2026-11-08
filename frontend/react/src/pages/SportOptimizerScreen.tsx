@@ -578,10 +578,7 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
               <PlayCircle className="w-4 h-4" />
               {running ? "Building…" : "Build portfolio"}
             </button>
-            <p className="label-quiet mt-2.5">
-              Nothing is built until you press the button. The slate changing
-              never rebuilds your portfolio behind your back.
-            </p>
+            {/**/}
             {settings.stack_rules.length > 0 && (
               <div className="mt-3 flex items-center gap-2">
                 <span className="chip chip-good">
@@ -781,12 +778,7 @@ function LineupsTab({
 }) {
   if (lineups.length === 0) {
     return (
-      <div className="well p-10 text-center">
-        <p className="text-ink-muted">
-          No lineups yet. Nothing is built until you press Build portfolio —
-          the slate loading does not choose a lineup for you.
-        </p>
-      </div>
+      <div className="well p-10 text-center" />
     );
   }
 

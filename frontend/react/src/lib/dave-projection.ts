@@ -22,16 +22,38 @@
  *    |z| — his "multimodal data, the peaks that don't belong"), re-test, and
  *    repeat at most twice per half. Peeled games are reported by index.
  *
- * 4. THE FACTOR. For each factor key present in the data, measure how
- *    strongly it separates the high half from the low half:
- *      - boolean factor:  P(present | high) vs P(present | low)
- *      - categorical:     best single value v, P(v | high) vs P(v | low)
- *      - numeric factor:  standardised mean difference (Cohen's d between
- *        the halves' factor values), squashed to a 0..1 scale via d/(d+1)
- *        so it can be ranked against probability separations.
- *    Pick the single factor with the largest separation (his doc: "you
- *    simply pick one of them (not multiple) and test that"). Ties break
- *    alphabetically for determinism.
+ * 4. THE FACTOR. For each factor key present in the data, build the ONE
+ *    condition that marks the higher-scoring side (the high side of the
+ *    median split) and test it the standard way: a two-sample t-test
+ *    between the scores of the games WHERE THE CONDITION HOLDS and the
+ *    games where it does not (Welch's t, sample variances). Factor keys
+ *    are ordinary pre-game conditions; three shapes are handled:
+ *      - boolean:      the true group vs the false group; the condition
+ *                      is the state whose games average higher, and the
+ *                      upcoming game holds it (P = 1) or not (P = 0).
+ *      - categorical:  the single value v whose presence or absence
+ *                      separates the halves with the best two-sample t
+ *                      (opponent=NE, month=December, venue=...); the
+ *                      condition is the state whose games average
+ *                      higher, v or its complement.
+ *      - numeric:      values are split at the midpoint between the two
+ *                      halves' factor-value means; the condition is
+ *                      "value above the midpoint" when the above group
+ *                      averages higher, "below" otherwise, and the test
+ *                      compares the scores of the two groups.
+ *    A factor is only ALLOWED to set P when its test clears the evidence
+ *    floor |t| >= 2 (FACTOR_T_MIN). Every factor that clears the floor is
+ *    reported in `factors`, ranked strongest (highest |t|) first, ties
+ *    broken alphabetically. One factor at a time sets P — his doc: "you
+ *    simply pick one of them (not multiple) and test that" — but the
+ *    ranked list makes the set extensible: if the strongest factor's
+ *    condition is UNKNOWN for the upcoming game, the next known factor's
+ *    condition sets P; when no factor's condition is known, P = 0.5 and
+ *    the projection falls to his even-split floor. The defined P values
+ *    stay { 0, 1, 0.5 }: a P of 0.5 is defined as "the factor's state is
+ *    not known for the upcoming game (or none applies)", which projects
+ *    the balanced average of the two half means. It is never read as a
+ *    side call; categorisation is done downstream against the cut C.
  *
  * 5. P for the upcoming game — the probability the HIGH side's factor
  *    condition holds in the upcoming game, from its known conditions:
@@ -66,6 +88,19 @@
  *    interval. The multiplier is the normal 90% quantile (1.645); with
  *    halves this small that is anticonservative, which we state rather than
  *    hide.
+ *
+ * 8. BREAKPOINTS (regime leads). detectBreakpoints walks a player's
+ *    career chronologically and flags every distinct contrast:
+ *      - team change: the team field changes between consecutive games
+ *        when the factors carry a team.
+ *      - big swing: |score - previous score| >= 15 DK points.
+ *      - level shift: the mean of the 5 games before an index differs
+ *        from the mean of the 5 games from it onward by >= 6 DK points
+ *        AND the two-sample t between the two windows clears |t| >= 2,
+ *        with a cooldown so consecutive windows do not re-flag the
+ *        same shift.
+ *    Flags are leads, not firings — they are recorded with dates so a
+ *    projection's regime can be defended game by game.
  */
 
 /** One completed game. score = DraftKings fantasy points for that game;
@@ -93,17 +128,65 @@ export interface DaveProjection {
   sameMeans: boolean;
   /** Post-peel verdict per half: true = passed the skew/kurtosis test. */
   normality: { high: boolean; low: boolean };
-  /** How the winning factor separates the halves (null when no factor used). */
+  /** How the factor that set P separates the halves (null when none). */
   factorDetail: {
     /** The condition that marks the HIGH side (numeric: the midpoint rule). */
     condition: string;
     highFraction: number;
     lowFraction: number;
   } | null;
+  /**
+   * Every factor whose two-sample t-test cleared the evidence floor,
+   * strongest (highest |t|) first. Empty when the halves are one
+   * population (the raw-average path) or nothing separates them. The
+   * condition that set P is the first one whose state is known for the
+   * upcoming game; when none is known P falls to his even-split floor.
+   */
+  factors: FactorApplication[];
+}
+
+/** The two-sample t-test behind one factor condition: the standard
+ *  with/without comparison of game scores (Welch's t). */
+export interface FactorTest {
+  t: number;
+  df: number;
+  /** Games where the condition holds, with their score mean. */
+  withN: number;
+  withMean: number;
+  /** Games where the condition does not hold, with their score mean. */
+  withoutN: number;
+  withoutMean: number;
+}
+
+/** One factor condition, its two-sample t-test, and how it evaluates a value. */
+export interface FactorApplication {
+  key: string;
+  /** The condition that marks the higher-scoring side, readable. */
+  condition: string;
+  /**
+   * Whether the condition holds for a candidate value: true / false, or
+   * undefined when the value is missing or not comparable (unknown).
+   */
+  holds(value: boolean | number | string | undefined): boolean | undefined;
+  test: FactorTest;
+  /** Share of each half (of the post-peel games) where the condition holds. */
+  highFraction: number;
+  lowFraction: number;
+  /** The evidence sentence for a report: condition, t, df, both groups. */
+  detail: string;
 }
 
 /** |t| below this -> the halves are the same population (see module doc). */
 const SAME_T = 2.1;
+
+/**
+ * Evidence floor for a factor: a condition may only set P when the
+ * two-sample t-test of the games where it holds against the games where
+ * it does not reaches |t| >= 2. Every applied factor's t and df are
+ * reported with it, so a small-df t near 2 is visible as the weaker
+ * evidence it is, not buried.
+ */
+const FACTOR_T_MIN = 2.0;
 /** Normality thresholds: |skew| > 1 or |excess kurtosis| > 2 -> non-normal. */
 const SKEW_LIMIT = 1;
 const KURT_LIMIT = 2;
@@ -211,123 +294,204 @@ function peelOutliers(
   return { kept, peeled };
 }
 
-interface FactorCandidate {
-  key: string;
-  /** Separation on a 0..1 scale (see module doc). */
-  sep: number;
-  highFraction: number;
-  lowFraction: number;
-  /** Evaluated against the upcoming game's value: true / false / unknown. */
-  holds(value: boolean | number | string | undefined): boolean | undefined;
-  describe(): string;
+/**
+ * Factor detection — the two-sample t-test machinery (see module doc 4).
+ * Each candidate key yields ONE condition oriented to the higher-scoring
+ * side, tested the standard way: the scores of the games where the
+ * condition holds vs the scores of the games where it does not. Only
+ * candidates clearing FACTOR_T_MIN are returned; |t| ties break
+ * alphabetically for determinism.
+ */
+
+/** Scores of the entries whose factor value satisfies hold (undefined
+ *  values never join a group — an unknown is unknown, not a group). */
+function scoresFor(
+  entries: { game: GameLog }[],
+  key: string,
+  hold: (v: boolean | number | string) => boolean,
+): number[] {
+  const out: number[] = [];
+  for (const e of entries) {
+    const v = e.game.factors[key];
+    if (v === undefined) continue;
+    if (hold(v)) out.push(e.game.score);
+  }
+  return out;
 }
 
+/** Fraction of entries where the condition holds (unknowns excluded from
+ *  the denominator, like the scores above). */
+function fractionHolding(
+  entries: { game: GameLog }[],
+  key: string,
+  hold: (v: boolean | number | string) => boolean,
+): number {
+  let holdCount = 0;
+  let known = 0;
+  for (const e of entries) {
+    const v = e.game.factors[key];
+    if (v === undefined) continue;
+    known++;
+    if (hold(v)) holdCount++;
+  }
+  return known ? holdCount / known : 0;
+}
+
+function buildApplication(
+  key: string,
+  condition: string,
+  holds: (v: boolean | number | string | undefined) => boolean | undefined,
+  withScores: number[],
+  withoutScores: number[],
+  highEntries: { game: GameLog }[],
+  lowEntries: { game: GameLog }[],
+): FactorApplication | null {
+  if (withScores.length < 2 || withoutScores.length < 2) return null;
+  const test = welchT(withScores, withoutScores);
+  if (Math.abs(test.t) < FACTOR_T_MIN) return null;
+  const highFraction = fractionHolding(highEntries, key, (v) => holds(v) === true);
+  const lowFraction = fractionHolding(lowEntries, key, (v) => holds(v) === true);
+  const detail =
+    condition +
+    " (two-sample t-test: t=" +
+    test.t.toFixed(2) +
+    ", df=" +
+    test.df +
+    "; scores average " +
+    mean(withScores).toFixed(2) +
+    " in n=" +
+    withScores.length +
+    " games when the condition holds vs " +
+    mean(withoutScores).toFixed(2) +
+    " in n=" +
+    withoutScores.length +
+    " games when it does not)";
+  return {
+    key,
+    condition,
+    holds,
+    test: {
+      t: test.t,
+      df: test.df,
+      withN: withScores.length,
+      withMean: mean(withScores),
+      withoutN: withoutScores.length,
+      withoutMean: mean(withoutScores),
+    },
+    highFraction,
+    lowFraction,
+    detail,
+  };
+}
+
+/**
+ * Detect the factor candidates for one player at one target game.
+ *
+ * Two shapes of condition, one candidate per key:
+ *  - non-numeric keys: for every observed value v, test the state
+ *    "key = v" against its complement; whichever of v / its complement
+ *    averages the higher score becomes the condition (the complement
+ *    candidate is "key != v"). The best value wins the key.
+ *  - numeric keys: split at the midpoint between the halves' own means
+ *    of the factor value; the condition is the side of the midpoint
+ *    whose games score higher; the test compares the two groups' scores.
+ */
 function detectFactorCandidates(
   low: { game: GameLog; index: number }[],
   high: { game: GameLog; index: number }[],
-): FactorCandidate[] {
+): FactorApplication[] {
   const keys = new Set<string>();
   for (const e of [...low, ...high]) {
     for (const k of Object.keys(e.game.factors)) keys.add(k);
   }
-  const out: FactorCandidate[] = [];
+  const entries = [...low, ...high];
+  const out: FactorApplication[] = [];
+
   for (const key of Array.from(keys).sort()) {
-    const lowDef = low
-      .map((e) => e.game.factors[key])
-      .filter((v) => v !== undefined);
-    const highDef = high
-      .map((e) => e.game.factors[key])
-      .filter((v) => v !== undefined);
-    if (lowDef.length < 1 || highDef.length < 1) continue;
-    const all = [...lowDef, ...highDef];
-    if (all.every((v) => typeof v === "boolean")) {
-      // P(present) per half; orient the condition to the high side.
-      const fH = highDef.filter(Boolean).length / highDef.length;
-      const fL = lowDef.filter(Boolean).length / lowDef.length;
-      const condTrue = fH >= fL;
-      const sep = Math.abs(fH - fL);
-      if (sep <= 0) continue;
-      out.push({
-        key,
-        sep,
-        highFraction: condTrue ? fH : 1 - fH,
-        lowFraction: condTrue ? fL : 1 - fL,
-        holds: (v) =>
-          v === undefined ? undefined : condTrue ? v === true : v === false,
-        describe: () => key + "=" + condTrue,
-      });
-    } else if (all.every((v) => typeof v === "number")) {
-      const mH = mean(highDef.map(Number));
-      const mL = mean(lowDef.map(Number));
-      const vH = sampleVariance(highDef.map(Number));
-      const vL = sampleVariance(lowDef.map(Number));
-      const pooled = Math.sqrt(
-        ((highDef.length - 1) * vH + (lowDef.length - 1) * vL) /
-          (highDef.length + lowDef.length - 2),
-      );
-      if (mH === mL) continue;
-      const d = pooled === 0 ? Infinity : Math.abs(mH - mL) / pooled;
-      const sep = d === Infinity ? 1 : d / (d + 1); // squashed to 0..1
-      const highAbove = mH > mL;
-      const mid = (mH + mL) / 2;
-      const fracAbove = (defs: (boolean | number | string)[]) =>
-        defs.filter((v) => Number(v) > mid).length / defs.length;
-      out.push({
-        key,
-        sep,
-        highFraction: highAbove ? fracAbove(highDef) : 1 - fracAbove(highDef),
-        lowFraction: highAbove ? fracAbove(lowDef) : 1 - fracAbove(lowDef),
-        holds: (v) => {
-          if (v === undefined || typeof v !== "number") return undefined;
-          if (v === mid) return undefined; // exactly at the midpoint -> uncertain
-          return highAbove ? v > mid : v < mid;
-        },
-        describe: () =>
-          key +
-          " " +
-          (highAbove ? ">" : "<") +
-          " " +
-          mid.toFixed(2) +
-          " (high mean " +
-          mH.toFixed(2) +
-          " vs low " +
-          mL.toFixed(2) +
-          ")",
-      });
-    } else {
-      // Categorical: the best single value, oriented to the high side.
-      const values = Array.from(new Set(all.map(String))).sort();
-      let best: { v: string; sep: number } | null = null;
-      for (const v of values) {
-        const fH =
-          highDef.filter((x) => String(x) === v).length / highDef.length;
-        const fL =
-          lowDef.filter((x) => String(x) === v).length / lowDef.length;
-        const sep = Math.abs(fH - fL);
-        if (!best || sep > best.sep) best = { v, sep };
-      }
-      if (!best || best.sep <= 0) continue;
-      const bv = best.v;
-      const fH =
-        highDef.filter((x) => String(x) === bv).length / highDef.length;
-      const fL =
-        lowDef.filter((x) => String(x) === bv).length / lowDef.length;
-      const condIsValue = fH >= fL;
-      out.push({
-        key,
-        sep: best.sep,
-        highFraction: condIsValue ? fH : 1 - fH,
-        lowFraction: condIsValue ? fL : 1 - fL,
-        holds: (v) =>
-          v === undefined
-            ? undefined
-            : condIsValue
-              ? String(v) === bv
-              : String(v) !== bv,
-        describe: () => key + "=" + bv,
-      });
+    const known = entries.filter((e) => e.game.factors[key] !== undefined);
+    if (known.length < 4) continue;
+
+    const values = known.map((e) => e.game.factors[key]);
+    if (values.every((v) => typeof v === "number")) {
+      // Numeric: the midpoint rule.
+      const highVals = high
+        .map((e) => Number(e.game.factors[key]))
+
+        .filter((v) => Number.isFinite(v));
+      const lowVals = low
+        .map((e) => Number(e.game.factors[key]))
+
+        .filter((v) => Number.isFinite(v));
+      if (highVals.length < 2 || lowVals.length < 2) continue;
+      const mid = (mean(highVals) + mean(lowVals)) / 2;
+      const aboveScores = scoresFor(entries, key, (v) => Number(v) > mid);
+      const belowScores = scoresFor(entries, key, (v) => Number(v) < mid);
+      if (aboveScores.length < 2 || belowScores.length < 2) continue;
+      const aboveHigher = mean(aboveScores) >= mean(belowScores);
+      const app = aboveHigher
+        ? buildApplication(
+            key,
+            key + " > " + mid.toFixed(2),
+            (v) => {
+              if (v === undefined || typeof v !== "number" || !Number.isFinite(v)) return undefined;
+              if (v === mid) return undefined; // exactly at the midpoint -> uncertain
+              return v > mid;
+            },
+            aboveScores,
+            belowScores,
+            high,
+            low,
+          )
+        : buildApplication(
+            key,
+            key + " < " + mid.toFixed(2),
+            (v) => {
+              if (v === undefined || typeof v !== "number" || !Number.isFinite(v)) return undefined;
+              if (v === mid) return undefined;
+              return v < mid;
+            },
+            belowScores,
+            aboveScores,
+            high,
+            low,
+          );
+      if (app) out.push(app);
+      continue;
     }
+
+    // Non-numeric: best single value, oriented to the higher-scoring state.
+    const distinctValues = Array.from(new Set(known.map((e) => String(e.game.factors[key])))).sort();
+    let best: FactorApplication | null = null;
+    for (const v of distinctValues) {
+      const equalsScores = scoresFor(entries, key, (x) => String(x) === v);
+      const notScores = scoresFor(entries, key, (x) => String(x) !== v);
+      const equalsHigher = mean(equalsScores) >= mean(notScores);
+      const app = equalsHigher
+        ? buildApplication(
+            key,
+            key + "=" + v,
+            (x) => (x === undefined ? undefined : String(x) === v),
+            equalsScores,
+            notScores,
+            high,
+            low,
+          )
+        : buildApplication(
+            key,
+            key + "!=" + v,
+            (x) => (x === undefined ? undefined : String(x) !== v),
+            notScores,
+            equalsScores,
+            high,
+            low,
+          );
+      if (!app) continue;
+      if (!best || Math.abs(app.test.t) > Math.abs(best.test.t)) best = app;
+    }
+    if (best) out.push(best);
   }
+
+  out.sort((a, b) => Math.abs(b.test.t) - Math.abs(a.test.t) || a.key.localeCompare(b.key));
   return out;
 }
 
@@ -392,6 +556,7 @@ export function projectDave(
       sameMeans,
       normality,
       factorDetail: null,
+      factors: [],
     };
   };
 
@@ -403,27 +568,145 @@ export function projectDave(
   }
 
   const candidates = detectFactorCandidates(lowPeeled.kept, highPeeled.kept);
-  const winner = candidates.reduce<FactorCandidate | null>((acc, c) => {
-    if (!acc || c.sep > acc.sep) return c;
-    return acc;
-  }, null);
 
-  if (!winner) {
-    // Nothing separates the halves -> his even-split floor.
-    return build(0.5);
-  }
-
-  const holds = winner.holds(upcoming[winner.key]);
-  const p = holds === undefined ? 0.5 : holds ? 1 : 0;
+  // Strongest factor first; the first whose condition is known for the
+  // upcoming game sets P. When none is known, P falls to his even-split
+  // floor: the balanced average of the two half means (a definitional
+  // rule — see module doc 4). Categorisation happens downstream.
+  const applied =
+    candidates.find((f) => f.holds(upcoming[f.key]) !== undefined) ?? null;
+  const p = applied ? (applied.holds(upcoming[applied.key]) ? 1 : 0) : 0.5;
+  const shown = applied ?? candidates[0] ?? null;
 
   return {
     ...build(p),
-    factor: winner.key,
-    factorDetail: {
-      condition: winner.describe(),
-      highFraction: winner.highFraction,
-      lowFraction: winner.lowFraction,
-    },
+    factor: shown ? shown.key : null,
+    factorDetail: shown
+      ? {
+          condition: shown.condition,
+          highFraction: shown.highFraction,
+          lowFraction: shown.lowFraction,
+        }
+      : null,
+    factors: candidates,
     p,
   };
+}
+
+
+// ---------------------------------------------------------------------------
+// Breakpoints — regime leads (see module doc 8)
+// ---------------------------------------------------------------------------
+
+/** Named regime rules for detectBreakpoints (see module doc 8). */
+export const BREAKPOINT_RULES = {
+  /** A single-game move of at least this many DK points is a big swing. */
+  swingPoints: 15,
+  /** Games on each side of a suspected level shift. */
+  window: 5,
+  /** Smallest mean gap (DK points) between the two windows worth flagging. */
+  meanGap: 6,
+  /** Two-sample t floor for the level-shift check. */
+  shiftT: 2.0,
+  /** How many indices to skip after a flagged level shift (no re-flagging
+   *  consecutive windows of one shift). */
+  cooldown: 5,
+} as const;
+
+export interface Breakpoint {
+  kind: "team change" | "big swing" | "level shift";
+  /** Date of the first game in the new regime. */
+  date: string;
+  /** Date of the previous game, for context (null at the log's start). */
+  priorDate: string | null;
+  detail: string;
+}
+
+/**
+ * Walk a player's career chronologically and flag every distinct contrast.
+ * Flags are leads, not firings: a flagged breakpoint is a candidate factor
+ * worth investigating, recorded with dates so a projection's regime can be
+ * defended or corrected game by game.
+ */
+export function detectBreakpoints(games: GameLog[]): Breakpoint[] {
+  const flags: Breakpoint[] = [];
+  const rules = BREAKPOINT_RULES;
+  let lastShiftIndex = -(rules.cooldown + 1);
+  for (let i = 0; i < games.length; i++) {
+    const game = games[i];
+    if (i > 0) {
+      const prev = games[i - 1];
+      const prevTeam = prev.factors.team;
+      const curTeam = game.factors.team;
+      if (
+        typeof prevTeam === "string" &&
+        typeof curTeam === "string" &&
+        prevTeam !== curTeam
+      ) {
+        flags.push({
+          kind: "team change",
+          date: game.date,
+          priorDate: prev.date,
+          detail:
+            "team change: " +
+            prevTeam +
+            " to " +
+            curTeam +
+            " (first " +
+            curTeam +
+            " game on record " +
+            game.date +
+            ")",
+        });
+      }
+      const swing = game.score - prev.score;
+      if (Math.abs(swing) >= rules.swingPoints) {
+        flags.push({
+          kind: "big swing",
+          date: game.date,
+          priorDate: prev.date,
+          detail:
+            "score moved " +
+            prev.score.toFixed(2) +
+            " to " +
+            game.score.toFixed(2) +
+            " (" +
+            (swing > 0 ? "+" : "") +
+            swing.toFixed(2) +
+            " DK points in one game)",
+        });
+      }
+    }
+    if (
+      i >= rules.window &&
+      i + rules.window <= games.length &&
+      i - lastShiftIndex > rules.cooldown
+    ) {
+      const before = games
+        .slice(i - rules.window, i)
+        .map((g) => g.score);
+      const after = games.slice(i, i + rules.window).map((g) => g.score);
+      const gap = mean(after) - mean(before);
+      const { t, df } = welchT(after, before);
+      if (Math.abs(gap) >= rules.meanGap && Math.abs(t) >= rules.shiftT) {
+        flags.push({
+          kind: "level shift",
+          date: game.date,
+          priorDate: games[i - 1].date,
+          detail:
+            "5-game mean " +
+            mean(before).toFixed(2) +
+            " to " +
+            mean(after).toFixed(2) +
+            " (two-sample t-test: t=" +
+            t.toFixed(2) +
+            ", df=" +
+            df +
+            ")",
+        });
+        lastShiftIndex = i;
+      }
+    }
+  }
+  return flags;
 }

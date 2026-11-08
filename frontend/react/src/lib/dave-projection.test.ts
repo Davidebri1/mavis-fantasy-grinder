@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 
-import { projectDave, welchT, type GameLog } from "./dave-projection";
+import {
+  BREAKPOINT_RULES,
+  detectBreakpoints,
+  projectDave,
+  welchT,
+  type GameLog,
+} from "./dave-projection";
 
 /** Helper: build game logs from [score, factors] pairs. */
 function games(rows: [number, Record<string, boolean | number | string>][]): GameLog[] {
@@ -248,3 +254,113 @@ describe("projectDave — guards", () => {
     );
   });
 });
+
+describe("projectDave — multiple factors, ranked and gated", () => {
+  // isHome splits the halves cleanly (t = 13.8564, the hand-worked case);
+  // restDays is a real but weaker second contrast: its midpoint is 6.125,
+  // and the with-group scores [18,20,22] (mean 20) vs without [2,4,4,6,20]
+  // (mean 7.2) gives t = 12.8 / 3.4597 = 3.70.
+  const rows: [number, Record<string, boolean | number | string>][] = [
+    [2, { isHome: false, restDays: 3 }],
+    [4, { isHome: false, restDays: 4 }],
+    [4, { isHome: false, restDays: 3 }],
+    [6, { isHome: false, restDays: 2 }],
+    [18, { isHome: true, restDays: 10 }],
+    [20, { isHome: true, restDays: 2 }],
+    [20, { isHome: true, restDays: 11 }],
+    [22, { isHome: true, restDays: 13 }],
+  ];
+
+  it("reports every factor that clears the two-sample t-test, strongest first", () => {
+    const r = projectDave(games(rows), { isHome: true });
+    expect(r.factors.length).toBe(2);
+    expect(r.factors[0].key).toBe("isHome");
+    expect(r.factors[0].test.t).toBeCloseTo(13.8564, 3);
+    expect(r.factors[0].test.df).toBeCloseTo(6, 5);
+    expect(r.factors[1].key).toBe("restDays");
+    expect(Math.abs(r.factors[1].test.t)).toBeCloseTo(3.6991541800939984, 5);
+    // The stronger factor drives P and the projection.
+    expect(r.p).toBe(1);
+    expect(r.projection).toBeCloseTo(20, 10);
+    expect(r.factors.length).toBe(2);
+    expect(r.factor).toBe("isHome");
+  });
+
+  it("falls back to the next factor when the strongest condition is unknown", () => {
+    const r = projectDave(games(rows), { restDays: 12 });
+    expect(r.factor).toBe("restDays"); // midpoint 6.125 -> 12 holds
+    expect(r.p).toBe(1);
+    expect(r.projection).toBeCloseTo(20, 10);
+
+    const low = projectDave(games(rows), { restDays: 3 });
+    expect(low.p).toBe(0);
+    expect(low.projection).toBeCloseTo(4, 10);
+  });
+
+  it("keeps the even-split floor when no condition is known, and still reports the top factor", () => {
+    const r = projectDave(games(rows), {});
+    expect(r.factor).toBe("isHome"); // reported, even though nothing set P
+    expect(r.p).toBe(0.5);
+    expect(r.projection).toBeCloseTo(12, 10);
+  });
+
+  it("rejects a factor below the evidence floor (|t| < 2)", () => {
+    // isHome is perfectly mixed so its two-sample t is ~0.3: no factor may
+    // set P, and the candidate list is empty.
+    const mixed: [number, Record<string, boolean | number | string>][] = [
+      [2, { isHome: true }], [4, { isHome: true }], [4, { isHome: false }], [6, { isHome: false }],
+      [18, { isHome: true }], [20, { isHome: true }], [20, { isHome: false }], [22, { isHome: true }],
+    ];
+    const r = projectDave(games(mixed), { isHome: true });
+    expect(r.factors).toEqual([]);
+    expect(r.p).toBe(0.5);
+    expect(r.projection).toBeCloseTo(12, 10);
+  });
+});
+
+describe("detectBreakpoints — regime leads", () => {
+  it("flags a team change with its dates", () => {
+    const rows: [number, Record<string, boolean | number | string>][] = [
+      [10, { team: "NE" }],
+      [10, { team: "NE" }],
+      [11, { team: "NE" }],
+      [10, { team: "NE" }],
+      [10, { team: "GB" }],
+      [10, { team: "GB" }],
+      [11, { team: "GB" }],
+      [10, { team: "GB" }],
+    ];
+    const built = games(rows);
+    const flags = detectBreakpoints(built).filter((f) => f.kind === "team change");
+    expect(flags.length).toBe(1);
+    expect(flags[0].date).toBe(built[4].date);
+    expect(flags[0].priorDate).toBe(built[3].date);
+    expect(flags[0].detail).toContain("NE to GB");
+  });
+
+  it("flags a big single-game swing in both directions", () => {
+    const rows: [number, Record<string, boolean | number | string>][] = [
+      [10, {}], [10, {}], [10, {}], [30, {}], [10, {}],
+    ];
+    const built = games(rows);
+    const flags = detectBreakpoints(built).filter((f) => f.kind === "big swing");
+    expect(flags.length).toBe(2);
+    expect(flags[0].date).toBe(built[3].date);
+    expect(flags[1].date).toBe(built[4].date);
+    expect(BREAKPOINT_RULES.swingPoints).toBe(15);
+  });
+
+  it("flags a level shift once, with the two-sample t between the windows", () => {
+    const rows: [number, Record<string, boolean | number | string>][] = [
+      [18, {}], [18, {}], [19, {}], [19, {}], [18, {}],
+      [4, {}], [4, {}], [5, {}], [4, {}], [5, {}], [4, {}], [4, {}],
+    ];
+    const built = games(rows);
+    const flags = detectBreakpoints(built).filter((f) => f.kind === "level shift");
+    expect(flags.length).toBe(1);
+    expect(flags[0].date).toBe(built[5].date);
+    expect(flags[0].detail).toContain("18.40 to 4.40");
+    expect(flags[0].detail).toContain("t=-40.41");
+  });
+});
+
