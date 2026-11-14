@@ -194,6 +194,28 @@ class StrategyPipeline:
             )
         return out
 
+    def extra_deterministic_iteration(
+        self,
+        players: Sequence[Player],
+        settings: OptimizerSettings,
+        iteration: int,
+    ) -> StrategyResult | None:
+        """Generate an extra perturbed score vector when deterministic builds need > ceil(N/2) solves."""
+        if self.strategy == Strategy.MAX_PROJECTION:
+            base, amount, label = score_max_projection(players), 0.06, "max_projection_perturbed"
+        elif self.strategy == Strategy.BALANCED:
+            base, amount, label = score_balanced(players), 0.10, "balanced_perturbed"
+        elif self.strategy == Strategy.SALARY_CAP:
+            base, amount, label = score_salary_cap(players), 0.10, "salary_cap_perturbed"
+        else:
+            return None
+        seed_base = settings.seed if settings.seed is not None else 0
+        return StrategyResult(
+            scores=perturb(base, amount=amount, seed=_perturb_seed(seed_base, iteration)),
+            iteration=iteration,
+            description=label,
+        )
+
 
 def _perturb_seed(base: int, iteration: int) -> int:
     """Derive a per-iteration perturbation seed from a base seed."""

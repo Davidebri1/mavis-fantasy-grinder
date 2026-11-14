@@ -1,70 +1,35 @@
 /**
- * Daily lineup stacks — the groups on today's slate that lift each other.
+ * Daily lineup stack candidate proposals (UI-only, no solver logic).
  *
- * A stack is a small set of players who belong together: two teammates on
- * one side, the best players on both sides of one game, or two fighters in
- * one bout on an MMA card. Putting them in the same lineup concentrates the
- * upside that comes from them sharing the same night.
- *
- * This module only *proposes*. It never builds a lineup and never talks to
- * the solver. What it hands back for each proposal is a `StackRule` — the
- * constraint the engine writes into the build when the user picks it.
- *
- * Pure, no React, no I/O. The same slate in gives the same list out.
+ * Enforces sport roster-slot constraints on proposed stack cards: for NFL,
+ * every stack card carries at most 1 QB; game stacks pair 1 QB + 1–2 WR/TE
+ * on the primary side with a 0–1 bring-back RB/WR/TE from the opponent.
  */
-import type { Player } from "@/types";
-import type { StackRule } from "@/optimizer/types";
+import type { Player, Sport, StackRule } from "@/types";
 
-export type StackSport = "nba" | "nfl" | "mma" | "golf";
-
-/** What kind of stack this is. */
+export type StackSport = Sport;
 export type StackKind = "team" | "game" | "card";
-
-/**
- * The finer label. A card stack and a fight pair are both "card" scope, but
- * they are different things to a user, and the panel says so.
- */
 export type StackVariant = "team" | "game" | "card" | "bout";
 
 export interface StackCandidate {
-  /** Stable id for React keys and for tracking which one is active. */
   id: string;
-  /** What kind of stack this is. */
   kind: StackKind;
-  /** Finer label — "bout" separates a fight pair from a card stack. */
   variant: StackVariant;
-  /** Human title, e.g. "BOS 2-man stack" or "BOS@NE game stack". */
   name: string;
-  /** The team abbreviation, or the game key, this stack is built on. */
   scopeId: string;
-  /** scopeId is a team (true) or a game (false). */
   scope: "team" | "game";
-  /** The players in the stack, best-scoring first. */
   players: Player[];
-  /** Combined salary of the stack. */
   salary: number;
-  /** Combined projected points of the stack. */
   projection: number;
-  /** Projected points per $100 of salary. */
   value: number;
-  /** The rule that gets written into the optimizer when this stack is used. */
   rule: StackRule;
 }
 
 export interface GenerateStacksOptions {
-  /** How many stacks to return at most. Default 24. */
   limit?: number;
-  /**
-   * MMA only. A lineup normally cannot hold both fighters from one bout, so
-   * fight pairs are only offered when the user allows opponents.
-   */
   allowOpponents?: boolean;
 }
 
-/**
- * How many players a finished lineup holds. Used as the generous ceiling on
- * a stack rule — the rule is a guard rail, not a target.
- */
 const ROSTER_SIZE: Record<StackSport, number> = {
   nba: 8,
   nfl: 9,
@@ -79,7 +44,6 @@ function round(n: number, digits: number): number {
   return Math.round((n + Number.EPSILON) * f) / f;
 }
 
-/** Best score first. */
 function byProjection(a: Player, b: Player): number {
   return (b.projection ?? 0) - (a.projection ?? 0);
 }
@@ -104,10 +68,32 @@ function projectionOf(players: Player[]): number {
   return players.reduce((sum, p) => sum + (p.projection ?? 0), 0);
 }
 
-/**
- * Build one candidate from a chosen set of players. Everything the panel
- * shows is computed here so the list and the rule can never disagree.
- */
+function primaryPos(p: Player): string {
+  return (p.positions?.[0] ?? p.roster_positions?.[0] ?? "").toUpperCase();
+}
+
+function isQb(p: Player): boolean {
+  const all = [...(p.positions ?? []), ...(p.roster_positions ?? [])].map((s) =>
+    s.toUpperCase(),
+  );
+  return all.includes("QB");
+}
+
+function isDst(p: Player): boolean {
+  const pos = primaryPos(p);
+  return pos === "DST" || pos === "D" || pos === "DEF";
+}
+
+function isPassCatcher(p: Player): boolean {
+  const pos = primaryPos(p);
+  return pos === "WR" || pos === "TE";
+}
+
+function isBringBackSkill(p: Player): boolean {
+  const pos = primaryPos(p);
+  return pos === "RB" || pos === "WR" || pos === "TE";
+}
+
 function buildCandidate(params: {
   variant: StackVariant;
   name: string;
@@ -144,23 +130,53 @@ function buildCandidate(params: {
 }
 
 /**
- * NBA / NFL — team stacks. The team's best player leads, and the stack is
- * that player plus their one or two best teammates.
+ * NFL team stack selection respecting Classic 1-QB limit (never 2 QBs, never DST).
  */
+function pickNflTeamStack(members: Player[], size: number): Player[] | null {
+  const sorted = [...members].filter((p) => !isDst(p)).sort(byProjection);
+  const qbs = sorted.filter(isQb);
+  const passCatchers = sorted.filter(isPassCatcher);
+  const skills = sorted.filter((p) => !isQb(p));
+
+  const picks: Player[] = [];
+  if (qbs.length > 0) {
+    picks.push(qbs[0]);
+  }
+  for (const p of passCatchers) {
+    if (picks.length >= size) break;
+    picks.push(p);
+  }
+  for (const p of skills) {
+    if (picks.length >= size) break;
+    if (!picks.some((picked) => picked.id === p.id)) {
+      picks.push(p);
+    }
+  }
+  if (picks.length < size) return null;
+  if (picks.filter(isQb).length > 1) return null;
+  return picks;
+}
+
 function teamStacks(players: Player[], sport: StackSport): StackCandidate[] {
   const out: StackCandidate[] = [];
   for (const [team, members] of groupBy(players, (p) => p.team)) {
     if (members.length < 2) continue;
     const sorted = [...members].sort(byProjection);
     for (const size of [2, 3]) {
-      if (sorted.length < size) continue;
+      const picks =
+        sport === "nfl"
+          ? pickNflTeamStack(members, size)
+          : sorted.length >= size
+            ? sorted.slice(0, size)
+            : null;
+      if (!picks || picks.length < size) continue;
       out.push(
         buildCandidate({
           variant: "team",
           name: `${team} ${size}-man stack`,
           scope: "team",
           scopeId: team,
-          players: sorted.slice(0, size),
+          players: picks,
           sport,
         }),
       );
@@ -170,9 +186,62 @@ function teamStacks(players: Player[], sport: StackSport): StackCandidate[] {
 }
 
 /**
- * NBA / NFL — game stacks. A game stack crosses the matchup: it always holds
- * the best player from each side, so the lineup carries both teams' upside.
+ * NFL game stacks: 1 QB + 1–2 WR/TE on primary team + 0–1 bring-back RB/WR/TE
+ * from opponent. Strictly caps QB count at 1 and excludes DST units.
  */
+function buildNflGameVariants(sides: Player[][]): Player[][] {
+  if (sides.length < 2) return [];
+  const candidates: Array<{
+    primary: Player[];
+    opp: Player[];
+    qbProj: number;
+  }> = [];
+
+  for (let i = 0; i < 2; i++) {
+    const primary = sides[i];
+    const opp = sides[1 - i];
+    const qb = primary.find(isQb);
+    if (qb) {
+      candidates.push({ primary, opp, qbProj: qb.projection ?? 0 });
+    }
+  }
+
+  // Fallback to skill-only cross-game pair if neither side has an eligible QB
+  if (candidates.length === 0) {
+    const sA = sides[0].filter((p) => !isQb(p) && !isDst(p));
+    const sB = sides[1].filter((p) => !isQb(p) && !isDst(p));
+    if (sA.length > 0 && sB.length > 0) {
+      return [[sA[0], sB[0]]];
+    }
+    return [];
+  }
+
+  candidates.sort((a, b) => b.qbProj - a.qbProj);
+  const { primary, opp } = candidates[0];
+  const qb = primary.find(isQb)!;
+  const primaryPass = primary.filter(isPassCatcher);
+  const oppBringBack = opp.filter(isBringBackSkill);
+
+  const variants: Player[][] = [];
+  if (primaryPass.length >= 1) {
+    // 1 QB + 1 WR/TE + 1 opponent bring-back RB/WR/TE (3-man game stack)
+    if (oppBringBack.length >= 1) {
+      variants.push([qb, primaryPass[0], oppBringBack[0]]);
+    } else {
+      variants.push([qb, primaryPass[0]]);
+    }
+  }
+  if (primaryPass.length >= 2) {
+    // 1 QB + 2 WR/TE + 1 opponent bring-back RB/WR/TE (4-man game stack)
+    if (oppBringBack.length >= 1) {
+      variants.push([qb, primaryPass[0], primaryPass[1], oppBringBack[0]]);
+    } else {
+      variants.push([qb, primaryPass[0], primaryPass[1]]);
+    }
+  }
+  return variants.filter((v) => v.length >= 2 && v.filter(isQb).length <= 1);
+}
+
 function gameStacks(players: Player[], sport: StackSport): StackCandidate[] {
   const out: StackCandidate[] = [];
   for (const [gameKey, members] of groupBy(players, (p) => p.correlation_group)) {
@@ -182,18 +251,22 @@ function gameStacks(players: Player[], sport: StackSport): StackCandidate[] {
       .sort((a, b) => (b[0]?.projection ?? 0) - (a[0]?.projection ?? 0));
     if (sides.length < 2) continue;
 
-    const [a, b] = sides;
-    const core = [a[0], b[0]];
-    const extras = [
-      ...(a.length > 1 ? [a[1]] : []),
-      ...(b.length > 1 ? [b[1]] : []),
-    ].sort(byProjection);
-
-    const variants: Player[][] = [
-      core,
-      [...core, ...extras.slice(0, 1)],
-      [...core, ...extras.slice(0, 2)],
-    ];
+    let variants: Player[][];
+    if (sport === "nfl") {
+      variants = buildNflGameVariants(sides);
+    } else {
+      const [a, b] = sides;
+      const core = [a[0], b[0]];
+      const extras = [
+        ...(a.length > 1 ? [a[1]] : []),
+        ...(b.length > 1 ? [b[1]] : []),
+      ].sort(byProjection);
+      variants = [
+        core,
+        [...core, ...extras.slice(0, 1)],
+        [...core, ...extras.slice(0, 2)],
+      ];
+    }
 
     for (const picks of variants) {
       if (picks.length < 2) continue;
@@ -212,10 +285,23 @@ function gameStacks(players: Player[], sport: StackSport): StackCandidate[] {
   return out;
 }
 
-/**
- * MMA — card stacks. The best few fighters on the same card. When the user
- * has not allowed opponents, a stack never holds both sides of one fight.
- */
+function pickCard(
+  sorted: Player[],
+  size: number,
+  allowOpponents: boolean,
+): Player[] {
+  const picks: Player[] = [];
+  const usedBouts = new Set<string>();
+  for (const p of sorted) {
+    if (picks.length >= size) break;
+    const bout = p.bout ?? "";
+    if (!allowOpponents && bout && usedBouts.has(bout)) continue;
+    picks.push(p);
+    if (bout) usedBouts.add(bout);
+  }
+  return picks;
+}
+
 function cardStacks(
   players: Player[],
   sport: StackSport,
@@ -245,33 +331,6 @@ function cardStacks(
   return out;
 }
 
-/** Take the best fighters on a card, never two from the same fight. */
-function pickCard(
-  sorted: Player[],
-  size: number,
-  allowOpponents: boolean,
-): Player[] {
-  const picks: Player[] = [];
-  const usedBouts = new Set<string>();
-  for (const p of sorted) {
-    if (picks.length >= size) break;
-    const bout = p.bout ?? "";
-    if (!allowOpponents && bout && usedBouts.has(bout)) continue;
-    picks.push(p);
-    if (bout) usedBouts.add(bout);
-  }
-  return picks;
-}
-
-/**
- * MMA — fight pairs. Both fighters from one bout. Only offered when the user
- * allows opponents, because a lineup normally cannot hold both of them.
- *
- * The rule for a fight pair is written against the card, not the fight: the
- * engine counts a "game" rule by correlation group, and on an MMA card every
- * fighter shares the same one. Two fighters from the card is the strongest
- * statement the rule shape can make about a fight.
- */
 function boutStacks(players: Player[], sport: StackSport): StackCandidate[] {
   const out: StackCandidate[] = [];
   for (const [boutKey, fighters] of groupBy(players, (p) => p.bout)) {
@@ -292,13 +351,6 @@ function boutStacks(players: Player[], sport: StackSport): StackCandidate[] {
   return out;
 }
 
-/**
- * Scan the slate and return the best stack candidates, best combined
- * projection first.
- *
- * Golf has no stacks: every player is on their own hole, so there is no team
- * and no game to build around. It returns an empty list.
- */
 export function generateStacks(
   players: Player[],
   sport: StackSport,
@@ -312,9 +364,6 @@ export function generateStacks(
 
   let candidates: StackCandidate[];
   if (sport === "mma") {
-    // Fight pairs come first so that a fight pair survives deduplication
-    // against a card stack holding the same two fighters — the fight is the
-    // more specific of the two.
     candidates = [];
     if (allowOpponents) candidates = candidates.concat(boutStacks(eligible, sport));
     candidates = candidates.concat(cardStacks(eligible, sport, allowOpponents));
@@ -322,7 +371,6 @@ export function generateStacks(
     candidates = teamStacks(eligible, sport).concat(gameStacks(eligible, sport));
   }
 
-  // Same scope and the same players is the same stack, however it was found.
   const seen = new Set<string>();
   const unique: StackCandidate[] = [];
   for (const candidate of candidates) {

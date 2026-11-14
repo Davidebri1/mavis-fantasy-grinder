@@ -11,6 +11,7 @@ class Slate(models.Model):
 
     SPORT_CHOICES = [
         ("nba", "NBA"),
+        ("nfl", "NFL"),
         ("mma", "MMA"),
         ("golf", "Golf"),
     ]

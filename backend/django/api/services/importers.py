@@ -66,6 +66,8 @@ def import_csv(*, sport: str, file_bytes: bytes, filename: str = "") -> dict[str
     """Parse a CSV file and return an import preview."""
     if sport == "nba":
         return _parse_csv_nba(file_bytes)
+    if sport == "nfl":
+        return _parse_csv_nfl(file_bytes)
     if sport == "mma":
         return _parse_csv_mma(file_bytes)
     if sport == "golf":
@@ -77,6 +79,8 @@ def import_excel(*, sport: str, file_bytes: bytes, filename: str = "") -> dict[s
     """Parse an XLSX file and return an import preview."""
     if sport == "nba":
         return _parse_xlsx_nba(file_bytes)
+    if sport == "nfl":
+        return _parse_xlsx_nfl(file_bytes)
     if sport == "mma":
         return _parse_xlsx_mma(file_bytes)
     if sport == "golf":
@@ -117,6 +121,38 @@ def _parse_csv_nba(file_bytes: bytes) -> dict[str, Any]:
             }
         )
     return {"sport": "nba", "players": players, "warnings": warnings}
+
+
+def _parse_csv_nfl(file_bytes: bytes) -> dict[str, Any]:
+    text = file_bytes.decode("utf-8", errors="replace")
+    reader = csv.DictReader(io.StringIO(text))
+    players: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for row in reader:
+        try:
+            salary = int(str(row.get("Salary", "0")).replace("$", "").replace(",", ""))
+        except (TypeError, ValueError):
+            salary = 0
+            warnings.append(f"Bad salary on row {row.get('Name', '<unknown>')}")
+        positions = [p.strip() for p in (row.get("Position", "") or "").split("/") if p.strip()]
+        roster_positions = _derive_roster_positions_nfl(positions)
+        game_info = row.get("Game Info", "")
+        correlation_group = _extract_correlation_group(game_info)
+        players.append(
+            {
+                "id": row.get("ID", row.get("Id", row.get("Player ID", ""))) or row.get("Name", ""),
+                "name": row.get("Name", ""),
+                "salary": salary,
+                "projection": float(row.get("FPPG", 0) or 0),
+                "team": row.get("TeamAbbrev", ""),
+                "opponent": row.get("Opponent", ""),
+                "game_info": game_info,
+                "positions": positions,
+                "roster_positions": roster_positions,
+                "correlation_group": correlation_group,
+            }
+        )
+    return {"sport": "nfl", "players": players, "warnings": warnings}
 
 
 def _parse_csv_mma(file_bytes: bytes) -> dict[str, Any]:
@@ -200,6 +236,39 @@ def _parse_xlsx_nba(file_bytes: bytes) -> dict[str, Any]:
     return {"sport": "nba", "players": players, "warnings": warnings}
 
 
+def _parse_xlsx_nfl(file_bytes: bytes) -> dict[str, Any]:
+    wb = load_workbook(io.BytesIO(file_bytes), data_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        return {"sport": "nfl", "players": [], "warnings": ["Empty file"]}
+    headers = [str(h or "").strip() for h in rows[0]]
+    players: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for i, row in enumerate(rows[1:], start=1):
+        if row is None or all(cell is None for cell in row):
+            continue
+        record = dict(zip(headers, row))
+        salary = _safe_int(record.get("Salary"))
+        positions = [p.strip() for p in str(record.get("Position", "") or "").split("/") if p.strip()]
+        game_info = str(record.get("Game Info", "") or "")
+        players.append(
+            {
+                "id": str(record.get("ID") or record.get("Name", f"row-{i}")),
+                "name": str(record.get("Name", "") or ""),
+                "salary": salary,
+                "projection": _safe_float(record.get("FPPG")),
+                "team": str(record.get("TeamAbbrev", "") or ""),
+                "opponent": str(record.get("Opponent", "") or ""),
+                "game_info": game_info,
+                "positions": positions,
+                "roster_positions": _derive_roster_positions_nfl(positions),
+                "correlation_group": _extract_correlation_group(game_info),
+            }
+        )
+    return {"sport": "nfl", "players": players, "warnings": warnings}
+
+
 def _parse_xlsx_mma(file_bytes: bytes) -> dict[str, Any]:
     wb = load_workbook(io.BytesIO(file_bytes), data_only=True)
     ws = wb.active
@@ -264,6 +333,46 @@ def _derive_roster_positions(positions: list[str]) -> list[str]:
     if "UTIL" not in out:
         out.append("UTIL")
     return out
+
+
+def _derive_roster_positions_nfl(positions: list[str]) -> list[str]:
+    """Derive NFL roster slot eligibility from position."""
+    out: list[str] = list(positions)
+    for pos in positions:
+        p = pos.upper()
+        if p in ("RB", "FB", "WR", "TE"):
+            if "FLEX" not in out:
+                out.append("FLEX")
+    return out
+
+
+def _parse_xlsx_nfl(file_bytes: bytes) -> dict[str, Any]:
+    wb = load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        return {"sport": "nfl", "players": [], "warnings": ["Empty worksheet"]}
+    headers = [str(h or "").strip() for h in rows[0]]
+    players = []
+    for r in rows[1:]:
+        record = dict(zip(headers, r))
+        positions = [p.strip() for p in str(record.get("Position", "")).split("/") if p.strip()]
+        game_info = str(record.get("Game Info", ""))
+        players.append(
+            {
+                "id": str(record.get("ID") or record.get("Name", "")),
+                "name": str(record.get("Name", "")),
+                "salary": _safe_int(record.get("Salary")),
+                "projection": _safe_float(record.get("FPPG")),
+                "team": str(record.get("TeamAbbrev", "")),
+                "opponent": str(record.get("Opponent", "")),
+                "game_info": game_info,
+                "positions": positions,
+                "roster_positions": _derive_roster_positions_nfl(positions),
+                "correlation_group": _extract_correlation_group(game_info),
+            }
+        )
+    return {"sport": "nfl", "players": players, "warnings": []}
 
 
 def _extract_correlation_group(game_info: str) -> str:

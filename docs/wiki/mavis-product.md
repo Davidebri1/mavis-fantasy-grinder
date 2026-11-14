@@ -1,10 +1,13 @@
 # Product — what Fantasy Grinder is
 
-> **Current state, 2026-11-07.** The product on screen is now **Outlier**. The lineups are built
-> by the in-browser solver on Cloudflare Pages; the Django + Postgres backend is still in the repo
-> and CI-tested but is **not deployed**, and nothing on the live site calls it. Ownership is no
-> longer modelled at all, and the salary field holds only published DraftKings prices. Everything
-> below is a dated claim about the state at the commit each section cites.
+> **Current state, 2026-11-14.** All optimization, strategy execution, constraint enforcement, and
+> exports run exclusively on the **Django REST API** (`backend/django/`, configured for Cloudflare
+> Containers + Worker proxy via `wrangler.jsonc`, `Dockerfile`, and `worker/mavis-container-proxy.mjs`).
+> The client-side solver (`frontend/react/src/optimizer/`) has been removed so solver algorithms and
+> MILP constraints never ship in the browser bundle. Covers **NBA, NFL, MMA, and Golf** across all 5
+> strategies (`maxProjection`, `balanced`, `salaryCap`, `monteCarlo`, `contrarian`). ESPN live feed
+> ingestion remains active in the browser, with position-aware salary estimation floors (`$2,000`
+> DST, `$2,500` TE, `$3,000` RB/WR, `$4,500` QB; NBA `$150 * projection + $800`, `$3,000` floor).
 
 ## The short version
 

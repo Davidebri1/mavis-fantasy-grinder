@@ -79,6 +79,76 @@ class Constraint:
         raise NotImplementedError
 
 
+@dataclass(slots=True)
+class StackRulesConstraint(Constraint):
+    """Enforce min/max player counts for user-configured stack groups."""
+
+    # List of (rule_label, member_indices, min_count, max_count_or_none)
+    bounds: list[tuple[str, list[int], int, int | None]]
+
+    def add(self, problem: "pulp.LpProblem", x: list) -> None:
+        for idx, (label, members, min_c, max_c) in enumerate(self.bounds):
+            if not members:
+                continue
+            expr = pulp.lpSum(x[i] for i in members)
+            safe_label = "".join(ch if ch.isalnum() else "_" for ch in label)
+            if min_c > 0:
+                problem += expr >= min_c, f"stack_min_{idx}_{safe_label}"
+            if max_c is not None and max_c >= 0:
+                problem += expr <= max_c, f"stack_max_{idx}_{safe_label}"
+
+    def add_ortools(self, model, x) -> None:
+        for _, members, min_c, max_c in self.bounds:
+            if not members:
+                continue
+            expr = sum(x[i] for i in members)
+            if min_c > 0:
+                model.Add(expr >= min_c)
+            if max_c is not None and max_c >= 0:
+                model.Add(expr <= max_c)
+
+
+def build_stack_rule_bounds(players: Sequence, stack_rules: Sequence[dict] | None) -> list[tuple[str, list[int], int, int | None]]:
+    """Resolve generic stack rule dicts ({scope, id, min, max}) into player index bounds."""
+    if not stack_rules:
+        return []
+    bounds: list[tuple[str, list[int], int, int | None]] = []
+    for rule in stack_rules:
+        if not isinstance(rule, dict):
+            continue
+        scope = str(rule.get("scope", "")).lower().strip()
+        rule_id = str(rule.get("id", "")).upper().strip()
+        if not scope or not rule_id:
+            continue
+        min_c = int(rule.get("min") or 0)
+        raw_max = rule.get("max")
+        max_c = int(raw_max) if raw_max is not None else None
+        members: list[int] = []
+        rule_teams = set(rule_id.split("@")) if "@" in rule_id else set()
+        for i, p in enumerate(players):
+            p_team = (getattr(p, "team", "") or "").upper()
+            p_opp = (getattr(p, "opponent", "") or "").upper()
+            p_game = (getattr(p, "effective_correlation_group", "") or getattr(p, "correlation_group", "") or getattr(p, "game_info", "") or "").upper()
+            p_bout = (getattr(p, "bout", "") or "").upper()
+            matched = False
+            if scope == "team":
+                matched = p_team == rule_id
+            elif scope == "game":
+                if rule_id in p_game:
+                    matched = True
+                elif rule_teams and p_team in rule_teams and (not p_opp or p_opp in rule_teams):
+                    matched = True
+            elif scope == "bout":
+                matched = p_bout == rule_id
+            elif scope == "card":
+                matched = rule_id in p_game
+            if matched:
+                members.append(i)
+        if members or min_c > 0:
+            bounds.append((f"{scope}_{rule_id}", members, min_c, max_c))
+    return bounds
+
+
 def _constrain_forbid_pair(
     problem: pulp.LpProblem,
     x: list,

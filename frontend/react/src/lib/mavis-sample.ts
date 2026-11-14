@@ -2,7 +2,22 @@
  * Sample slates bundled into the static build. The customer sees real
  * player pools on first load — no DB import, no server call.
  */
-import type { Player } from "./types";
+export interface SamplePlayer {
+  id: string;
+  name: string;
+  sport: "nba" | "nfl" | "mma" | "golf";
+  salary: number;
+  projection: number;
+  team?: string;
+  opponent?: string;
+  gameInfo?: string;
+  positions?: string[];
+  rosterPositions?: string[];
+  correlationGroup?: string;
+  opponentId?: string;
+  bout?: string;
+  photoUrl?: string | null;
+}
 
 const PROJECTIONS_SEED = 42;
 
@@ -65,9 +80,9 @@ function rosterPositionsFor(pos: string): string[] {
   return [pos, "UTIL"];
 }
 
-export function buildNbaSample(): Player[] {
+export function buildNbaSample(): SamplePlayer[] {
   const rand = rng(PROJECTIONS_SEED);
-  const out: Player[] = [];
+  const out: SamplePlayer[] = [];
 
   for (const [teamA, teamB, idx, names] of NBA_TEAMS) {
     for (let offset = 0; offset < names.length; offset++) {
@@ -86,7 +101,8 @@ export function buildNbaSample(): Player[] {
         gameInfo: `${teamA}@${teamB} 7:00pm ET`,
         positions: [pos],
         rosterPositions: rosterPositionsFor(pos),
-        correlationGroup: `${teamA}@${teamB}`,        photoUrl: headshotUrl,
+        correlationGroup: `${teamA}@${teamB}`,
+        photoUrl: headshotUrl,
       });
     }
   }
@@ -148,9 +164,9 @@ const MMA_HEADSHOT_URLS: Record<string, string> = {
   "Kayla Harrison": "https://a.espncdn.com/i/headshots/mma/players/full/4332765.png",
 };
 
-export function buildMmaSample(): Player[] {
+export function buildMmaSample(): SamplePlayer[] {
   const rand = rng(PROJECTIONS_SEED + 1);
-  const out: Player[] = [];
+  const out: SamplePlayer[] = [];
   MMA_FIGHTERS.forEach((pair, i) => {
     const [a, b, div] = pair;
     out.push({
@@ -160,7 +176,8 @@ export function buildMmaSample(): Player[] {
       salary: 0,
       projection: Math.round(40 + rand() * 50),
       opponentId: `mma-${i}-1`,
-      bout: `${a} vs ${b}`,      photoUrl: MMA_HEADSHOT_URLS[a],
+      bout: `${a} vs ${b}`,
+      photoUrl: MMA_HEADSHOT_URLS[a],
     });
     out.push({
       id: `mma-${i}-1`,
@@ -169,7 +186,8 @@ export function buildMmaSample(): Player[] {
       salary: 0,
       projection: Math.round(40 + rand() * 50),
       opponentId: `mma-${i}-0`,
-      bout: `${a} vs ${b}`,      photoUrl: MMA_HEADSHOT_URLS[b],
+      bout: `${a} vs ${b}`,
+      photoUrl: MMA_HEADSHOT_URLS[b],
     });
     void div;
   });
@@ -223,14 +241,15 @@ const GOLF_HEADSHOT_URLS: Record<string, string> = {
   "Hideki Matsuyama": "https://a.espncdn.com/i/headshots/golf/players/full/5860.png",
 };
 
-export function buildGolfSample(): Player[] {
+export function buildGolfSample(): SamplePlayer[] {
   const rand = rng(PROJECTIONS_SEED + 2);
   return GOLF_PLAYERS.map((name, i) => ({
     id: `golf-${i}`,
     name,
     sport: "golf",
     salary: 0,
-    projection: Math.round(45 + rand() * 50),    photoUrl: GOLF_HEADSHOT_URLS[name],
+    projection: Math.round(45 + rand() * 50),
+    photoUrl: GOLF_HEADSHOT_URLS[name],
   }));
 }
 
@@ -296,9 +315,9 @@ const NFL_GAMES: Array<[string, string, Array<[string, string]>]> = [
  * The live pool is the real source; this keeps the app usable rather than
  * empty when ESPN is unreachable.
  */
-export function buildNflSample(): Player[] {
+export function buildNflSample(): SamplePlayer[] {
   const rand = rng(PROJECTIONS_SEED + 7);
-  const out: Player[] = [];
+  const out: SamplePlayer[] = [];
   const baseByPos: Record<string, number> = {
     QB: 22,
     RB: 16,
@@ -321,7 +340,8 @@ export function buildNflSample(): Player[] {
         gameInfo: `${gameKey} 1:00pm ET`,
         positions: [pos],
         rosterPositions: pos === "RB" ? ["RB", "FLEX"] : pos === "WR" ? ["WR", "FLEX"] : pos === "TE" ? ["TE", "FLEX"] : ["QB"],
-        correlationGroup: gameKey,        photoUrl: null,
+        correlationGroup: gameKey,
+        photoUrl: null,
       });
     });
     // One DST unit per side.
@@ -340,7 +360,8 @@ export function buildNflSample(): Player[] {
         gameInfo: `${gameKey} 1:00pm ET`,
         positions: ["DST"],
         rosterPositions: ["DST"],
-        correlationGroup: gameKey,        photoUrl: null,
+        correlationGroup: gameKey,
+        photoUrl: null,
       });
     });
   });

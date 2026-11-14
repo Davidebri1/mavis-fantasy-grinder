@@ -10,6 +10,13 @@ export type Sport = "nba" | "nfl" | "mma" | "golf";
 export type ContestType = "classic" | "showdown";
 export type SolverBackend = "pulp" | "ortools";
 
+export interface StackRule {
+  scope: "team" | "game";
+  id: string;
+  min: number;
+  max: number;
+}
+
 export type Strategy =
   | "monteCarlo"
   | "maxProjection"
@@ -108,6 +115,8 @@ export interface Player {
   opponent_id?: string;
   bout?: string;
   tee_time?: string | null;
+  projected_ownership?: number;
+  max_ownership?: number;
   min_exposure?: number;
   max_exposure?: number;
   stddev?: number | null;

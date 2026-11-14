@@ -202,6 +202,7 @@ function OptionRow({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
+      data-option={name}
       className={cn(
         "w-full text-left px-3 py-2 rounded-2 border transition-colors",
         selected
@@ -211,7 +212,6 @@ function OptionRow({
     >
       <div className="flex items-baseline gap-2">
         <span className="text-sm font-medium text-ink">{title}</span>
-        <span className="label-quiet">{name}</span>
       </div>
       <p className="label-quiet mt-0.5">{detail}</p>
     </button>

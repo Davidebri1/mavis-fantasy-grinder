@@ -15,6 +15,7 @@ from apps.common.models import Slate, SlateState
 from apps.golf.models import GolfPlayer
 from apps.mma.models import MmaFighter
 from apps.nba.models import NbaPlayer
+from apps.nfl.models import NflPlayer
 
 from .serializers import PlayerInputSerializer
 from .services.importers import import_csv, import_excel
@@ -25,9 +26,9 @@ from .services.importers import import_csv, import_excel
 @permission_classes([AllowAny])
 def list_slates(request):
     sport = request.query_params.get("sport")
-    if sport not in {"nba", "mma", "golf"}:
+    if sport not in {"nba", "nfl", "mma", "golf"}:
         return Response(
-            {"code": "invalid_sport", "message": "sport must be nba/mma/golf"},
+            {"code": "invalid_sport", "message": "sport must be nba/nfl/mma/golf"},
             status=status.HTTP_400_BAD_REQUEST,
         )
     not_before = request.query_params.get("not_before_date")
@@ -82,11 +83,42 @@ def slate_detail(request, slate_id):
 def _players_for_slate(slate):
     if slate.sport == "nba":
         return [_serialize_nba(p) for p in NbaPlayer.objects.filter(slate=slate)]
+    if slate.sport == "nfl":
+        return [_serialize_nfl(p) for p in NflPlayer.objects.filter(slate=slate)]
     if slate.sport == "mma":
         return [_serialize_mma(p) for p in MmaFighter.objects.filter(slate=slate)]
     if slate.sport == "golf":
         return [_serialize_golf(p) for p in GolfPlayer.objects.filter(slate=slate)]
     return []
+
+
+def _serialize_nfl(p: NflPlayer) -> dict:
+    return {
+        "id": p.id,
+        "name": p.name,
+        "sport": "nfl",
+        "salary": p.salary,
+        "projection": p.projection,
+        "user_projection": p.user_projection,
+        "team": p.team,
+        "opponent": p.opponent,
+        "game_info": p.game_info,
+        "game_time": p.game_time.isoformat() if p.game_time else None,
+        "positions": p.positions,
+        "roster_positions": p.roster_positions,
+        "correlation_group": p.correlation_group,
+        "projected_ownership": p.projected_ownership,
+        "max_ownership": p.max_ownership,
+        "min_exposure": p.min_exposure,
+        "max_exposure": p.max_exposure,
+        "stddev": p.stddev,
+        "is_locked": p.is_locked,
+        "is_excluded": p.is_excluded,
+        "is_liked": p.is_liked,
+        "injury_status": p.injury_status,
+        "injury_severity": p.injury_severity,
+        "photo_url": p.photo_url,
+    }
 
 
 def _serialize_nba(p: NbaPlayer) -> dict:
@@ -164,9 +196,9 @@ def list_players(request):
             return Response({"code": "not_found"}, status=404)
         return Response(_players_for_slate(slate))
 
-    if sport not in {"nba", "mma", "golf"}:
+    if sport not in {"nba", "nfl", "mma", "golf"}:
         return Response(
-            {"code": "invalid_sport", "message": "sport must be nba/mma/golf (or pass slate_id)"},
+            {"code": "invalid_sport", "message": "sport must be nba/nfl/mma/golf (or pass slate_id)"},
             status=status.HTTP_400_BAD_REQUEST,
         )
     # No slate_id — return players from the next active slate for the sport
@@ -186,9 +218,9 @@ def list_players(request):
 @permission_classes([AllowAny])
 def import_csv_view(request):
     sport = request.data.get("sport")
-    if sport not in {"nba", "mma", "golf"}:
+    if sport not in {"nba", "nfl", "mma", "golf"}:
         return Response(
-            {"code": "invalid_sport", "message": "sport must be nba/mma/golf"},
+            {"code": "invalid_sport", "message": "sport must be nba/nfl/mma/golf"},
             status=status.HTTP_400_BAD_REQUEST,
         )
     uploaded = request.FILES.get("file")
@@ -213,9 +245,9 @@ def import_csv_view(request):
 @permission_classes([AllowAny])
 def import_excel_view(request):
     sport = request.data.get("sport")
-    if sport not in {"nba", "mma", "golf"}:
+    if sport not in {"nba", "nfl", "mma", "golf"}:
         return Response(
-            {"code": "invalid_sport", "message": "sport must be nba/mma/golf"},
+            {"code": "invalid_sport", "message": "sport must be nba/nfl/mma/golf"},
             status=status.HTTP_400_BAD_REQUEST,
         )
     uploaded = request.FILES.get("file")

@@ -1,8 +1,8 @@
 """Django settings for Fantasy Grinder backend.
 
 Split deliberately simple: a single settings module reads from environment.
-For staging/prod we deploy via Render which sets env vars directly; no
-django-environ, no multiple settings files.
+Deployed via Cloudflare Containers + Worker proxy with env vars / secrets
+configured in Wrangler; no django-environ, no multiple settings files.
 """
 from __future__ import annotations
 
@@ -15,11 +15,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ───────────────────────────────────────────────────────────────────────────
 # Core
 # ───────────────────────────────────────────────────────────────────────────
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-change-me-in-production")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or os.environ.get("SECRET_KEY", "dev-only-change-me-in-production")
 DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() in {"1", "true", "yes"}
 ALLOWED_HOSTS = [
     h.strip()
-    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,*").split(",")
     if h.strip()
 ]
 
@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     # Local
     "apps.common",
     "apps.nba",
+    "apps.nfl",
     "apps.mma",
     "apps.golf",
 ]
@@ -79,8 +80,8 @@ TEMPLATES = [
 # ───────────────────────────────────────────────────────────────────────────
 # Database
 #
-# DATABASE_URL is the deploy contract: Render supplies it from the managed
-# Postgres (see render.yaml) and CI supplies it for the test database. The
+# DATABASE_URL is the deploy contract: Cloudflare Container / Postgres supplies
+# it (Neon / Supabase / RDS), and CI supplies it for the test database. The
 # PG* variables stay as a fallback for a Postgres started by hand.
 #
 # Ignoring DATABASE_URL here meant a deployed backend looked for a passwordless
@@ -88,7 +89,13 @@ TEMPLATES = [
 # ───────────────────────────────────────────────────────────────────────────
 _DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-if _DATABASE_URL:
+if _DATABASE_URL.startswith("sqlite://"):
+    _db_path = unquote(_DATABASE_URL.removeprefix("sqlite:///")) or str(BASE_DIR / "db.sqlite3")
+    _db = {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": _db_path,
+    }
+elif _DATABASE_URL:
     _u = urlparse(_DATABASE_URL)
     _options = {}
     _sslmode = parse_qs(_u.query).get("sslmode", [None])[0]
@@ -169,7 +176,7 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Fantasy Grinder API",
-    "DESCRIPTION": "DFS lineup optimizer for NBA, MMA, and Golf.",
+    "DESCRIPTION": "DFS lineup optimizer for NBA, NFL, MMA, and Golf.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
@@ -177,13 +184,13 @@ SPECTACULAR_SETTINGS = {
 }
 
 # ───────────────────────────────────────────────────────────────────────────
-# CORS — frontend runs on Netlify, dev on Vite's default 5173
+# CORS — frontend runs on Cloudflare Pages, dev on Vite (5173 / 8088)
 # ───────────────────────────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = [
     o.strip()
     for o in os.environ.get(
         "CORS_ALLOWED_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173",
+        "http://localhost:8088,http://127.0.0.1:8088,http://localhost:5173,http://127.0.0.1:5173,https://mavis-fantasy-grinder.pages.dev",
     ).split(",")
     if o.strip()
 ]

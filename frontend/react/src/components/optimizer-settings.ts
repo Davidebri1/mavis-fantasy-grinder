@@ -5,8 +5,7 @@
  * the engine-level `OptimizerSettings` in `@/optimizer/types`, which is what
  * the solver actually consumes. The screen maps one to the other.
  */
-import type { Strategy } from "@/types";
-import type { StackRule } from "@/optimizer/types";
+import type { StackRule, Strategy } from "@/types";
 
 export type Sport = "nba" | "nfl" | "mma" | "golf";
 

@@ -1,6 +1,6 @@
 -- Fantasy Grinder — Postgres schema (R1 / R4 deliverable)
 -- Replaces the Supabase tables used by the Flutter app.
--- Target: Postgres 15+ on Render.
+-- Target: Postgres 15+ (external managed Postgres connected via DATABASE_URL).
 
 begin;
 
@@ -14,7 +14,7 @@ create extension if not exists "pgcrypto";
 
 create table if not exists public.slates (
   id              uuid primary key default gen_random_uuid(),
-  sport           text not null check (sport in ('nba', 'mma', 'golf')),
+  sport           text not null check (sport in ('nba', 'nfl', 'mma', 'golf')),
   slate_date      date not null,
   slate_time      time not null,
   name            text not null,
@@ -44,6 +44,22 @@ create table if not exists public.nba_projection_rows (
 );
 create index if not exists nba_projection_rows_latest_idx
   on public.nba_projection_rows (projection_date, lower(name), created_at desc);
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- nfl_projection_rows: historical projections for NFL
+-- ───────────────────────────────────────────────────────────────────────────
+create table if not exists public.nfl_projection_rows (
+  id                 uuid primary key default gen_random_uuid(),
+  slate_id           uuid references public.slates (id) on delete cascade,
+  projection_date    date not null,
+  player_id          text not null,
+  name               text not null,
+  projection         double precision not null,
+  stddev             double precision,
+  created_at         timestamptz not null default now()
+);
+create index if not exists nfl_projection_rows_latest_idx
+  on public.nfl_projection_rows (projection_date, lower(name), created_at desc);
 
 -- ───────────────────────────────────────────────────────────────────────────
 -- mma_projection_rows: same shape, MMA-keyed
@@ -100,6 +116,26 @@ create index if not exists nba_injury_rows_slate_idx
   on public.nba_injury_rows (slate_id, lower(name));
 
 -- ───────────────────────────────────────────────────────────────────────────
+-- nfl_injury_rows: ESPN-synced injuries per slate for NFL
+-- ───────────────────────────────────────────────────────────────────────────
+create table if not exists public.nfl_injury_rows (
+  id                    uuid primary key default gen_random_uuid(),
+  slate_id              uuid references public.slates (id) on delete cascade,
+  player_id             text not null,
+  name                  text not null,
+  team                  text,
+  status                text,
+  severity              text,
+  short_comment         text,
+  long_comment          text,
+  updated_at            timestamptz,
+  raw_row               jsonb,
+  ingested_at           timestamptz not null default now()
+);
+create index if not exists nfl_injury_rows_slate_idx
+  on public.nfl_injury_rows (slate_id, lower(name));
+
+-- ───────────────────────────────────────────────────────────────────────────
 -- nba_news_rows: ESPN-synced news per slate
 -- ───────────────────────────────────────────────────────────────────────────
 create table if not exists public.nba_news_rows (
@@ -114,6 +150,22 @@ create table if not exists public.nba_news_rows (
 );
 create index if not exists nba_news_rows_slate_idx
   on public.nba_news_rows (slate_id, published desc);
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- nfl_news_rows: ESPN-synced news per slate for NFL
+-- ───────────────────────────────────────────────────────────────────────────
+create table if not exists public.nfl_news_rows (
+  id                    uuid primary key default gen_random_uuid(),
+  slate_id              uuid references public.slates (id) on delete cascade,
+  player_id             text,
+  title                 text,
+  published             timestamptz,
+  link                  text,
+  raw_row               jsonb,
+  ingested_at           timestamptz not null default now()
+);
+create index if not exists nfl_news_rows_slate_idx
+  on public.nfl_news_rows (slate_id, published desc);
 
 -- ───────────────────────────────────────────────────────────────────────────
 -- optimization_runs: audit trail of every /api/optimize call

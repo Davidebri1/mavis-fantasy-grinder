@@ -247,3 +247,44 @@ def test_import_csv_returns_preview(client):
     assert body["sport"] == "nba"
     assert len(body["players"]) == 2
     assert body["players"][0]["name"] == "LeBron James"
+
+
+@pytest.mark.django_db
+def test_optimize_endpoint_nfl(client):
+    players = [
+        {"id": "p01", "name": "Patrick Mahomes", "salary": 7500, "projection": 24.0, "team": "KC", "opponent": "BAL", "game_info": "KC@BAL 8:00pm ET", "positions": ["QB"], "roster_positions": ["QB"], "correlation_group": "KC@BAL"},
+        {"id": "p02", "name": "Lamar Jackson", "salary": 8000, "projection": 25.0, "team": "BAL", "opponent": "KC", "game_info": "KC@BAL 8:00pm ET", "positions": ["QB"], "roster_positions": ["QB"], "correlation_group": "KC@BAL"},
+        {"id": "p03", "name": "Derrick Henry", "salary": 7000, "projection": 18.0, "team": "BAL", "opponent": "KC", "game_info": "KC@BAL 8:00pm ET", "positions": ["RB"], "roster_positions": ["RB", "FLEX"], "correlation_group": "KC@BAL"},
+        {"id": "p04", "name": "Isiah Pacheco", "salary": 4500, "projection": 15.0, "team": "KC", "opponent": "BAL", "game_info": "KC@BAL 8:00pm ET", "positions": ["RB"], "roster_positions": ["RB", "FLEX"], "correlation_group": "KC@BAL"},
+        {"id": "p05", "name": "Rashee Rice", "salary": 5200, "projection": 16.0, "team": "KC", "opponent": "BAL", "game_info": "KC@BAL 8:00pm ET", "positions": ["WR"], "roster_positions": ["WR", "FLEX"], "correlation_group": "KC@BAL"},
+        {"id": "p06", "name": "Travis Kelce", "salary": 5800, "projection": 14.5, "team": "KC", "opponent": "BAL", "game_info": "KC@BAL 8:00pm ET", "positions": ["TE"], "roster_positions": ["TE", "FLEX"], "correlation_group": "KC@BAL"},
+        {"id": "p07", "name": "Zay Flowers", "salary": 4800, "projection": 13.5, "team": "BAL", "opponent": "KC", "game_info": "KC@BAL 8:00pm ET", "positions": ["WR"], "roster_positions": ["WR", "FLEX"], "correlation_group": "KC@BAL"},
+        {"id": "p08", "name": "Mark Andrews", "salary": 4200, "projection": 11.0, "team": "BAL", "opponent": "KC", "game_info": "KC@BAL 8:00pm ET", "positions": ["TE"], "roster_positions": ["TE", "FLEX"], "correlation_group": "KC@BAL"},
+        {"id": "p09", "name": "Christian McCaffrey", "salary": 8500, "projection": 22.0, "team": "SF", "opponent": "LAR", "game_info": "SF@LAR 4:25pm ET", "positions": ["RB"], "roster_positions": ["RB", "FLEX"], "correlation_group": "SF@LAR"},
+        {"id": "p10", "name": "Cooper Kupp", "salary": 6200, "projection": 17.0, "team": "LAR", "opponent": "SF", "game_info": "SF@LAR 4:25pm ET", "positions": ["WR"], "roster_positions": ["WR", "FLEX"], "correlation_group": "SF@LAR"},
+        {"id": "p11", "name": "Puka Nacua", "salary": 5000, "projection": 16.5, "team": "LAR", "opponent": "SF", "game_info": "SF@LAR 4:25pm ET", "positions": ["WR"], "roster_positions": ["WR", "FLEX"], "correlation_group": "SF@LAR"},
+        {"id": "p12", "name": "Kyren Williams", "salary": 5200, "projection": 16.0, "team": "LAR", "opponent": "SF", "game_info": "SF@LAR 4:25pm ET", "positions": ["RB"], "roster_positions": ["RB", "FLEX"], "correlation_group": "SF@LAR"},
+        {"id": "p13", "name": "49ers DST", "salary": 3200, "projection": 8.5, "team": "SF", "opponent": "LAR", "game_info": "SF@LAR 4:25pm ET", "positions": ["DST"], "roster_positions": ["DST"], "correlation_group": "SF@LAR"},
+        {"id": "p14", "name": "Rams DST", "salary": 2800, "projection": 7.0, "team": "LAR", "opponent": "SF", "game_info": "SF@LAR 4:25pm ET", "positions": ["DST"], "roster_positions": ["DST"], "correlation_group": "SF@LAR"},
+    ]
+    resp = client.post(
+        "/api/optimize/",
+        data={
+            "sport": "nfl",
+            "solver_backend": "pulp",
+            "settings": {
+                "salary_cap": 50000,
+                "num_lineups": 2,
+                "contest_type": "classic",
+                "strategy": "maxProjection",
+            },
+            "players": players,
+        },
+        content_type="application/json",
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["lineups"]) > 0
+    assert data["lineups"][0]["total_salary"] <= 50000
+    assert len(data["lineups"][0]["assignments"]) == 9
+

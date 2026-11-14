@@ -154,12 +154,24 @@ def _build_settings(sport: Sport, settings_dict: dict) -> OptimizerSettings:
             "bring_back_count": settings_dict.get("bring_back_count", 1),
             "team_min_players": settings_dict.get("global_min_players_per_team", 0),
             "team_max_players": settings_dict.get("global_max_players_per_team", 0),
+            "stack_rules": settings_dict.get("stack_rules") or settings_dict.get("team_stacking_rules") or [],
+        }
+    elif sport == Sport.NFL:
+        common_kwargs["contest_type"] = ContestType(settings_dict.get("contest_type", "classic"))
+        extras = {
+            "qb_wr_te_correlation": settings_dict.get("qb_wr_te_correlation", 0.45),
+            "qb_opp_wr_correlation": settings_dict.get("qb_opp_wr_correlation", 0.25),
+            "qb_opp_dst_correlation": settings_dict.get("qb_opp_dst_correlation", -0.60),
+            "teammate_correlation": settings_dict.get("teammate_correlation", 0.20),
+            "team_max_players": settings_dict.get("global_max_players_per_team", 0),
+            "stack_rules": settings_dict.get("stack_rules", []),
         }
     elif sport == Sport.MMA:
         extras = {
             "allow_opponents": settings_dict.get("allow_opponents", False),
             "opponent_correlation": settings_dict.get("opponent_correlation", -0.40),
             "card_correlation": settings_dict.get("card_correlation", 0.10),
+            "stack_rules": settings_dict.get("stack_rules", []),
         }
     else:  # GOLF
         extras = {}

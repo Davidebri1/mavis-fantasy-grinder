@@ -126,20 +126,28 @@ node scripts/mavis-deploy-cloudflare.mjs --check   # auth + target, uploads noth
 that is the one-time case above. Fix it and move on — it is not a recurring
 step and it is never a question for the customer.**
 
-### Backend (Render) — not deployed yet
+### Backend (Cloudflare Containers + Worker Proxy)
 
-`backend/django/render.yaml` provisions the web service and Postgres. Render runs:
+Configured in `backend/django/` via `Dockerfile`, `wrangler.jsonc`, and
+`worker/mavis-container-proxy.mjs` (replacing the retired Render setup):
 
-1. `pip install -r requirements.txt`
-2. `python manage.py collectstatic --noinput`
-3. `python manage.py migrate`
-4. `gunicorn config.wsgi:application --workers 4 --timeout 120`
+```bash
+cd backend/django
+npm install
+npx wrangler@4.157.0 secret put DATABASE_URL
+npx wrangler@4.157.0 secret put DJANGO_SECRET_KEY
+npx wrangler@4.157.0 secret put ODDS_API_KEY
+npx wrangler@4.157.0 deploy
+```
+
+Note: Cloudflare Containers requires the **Workers Paid plan** on the Cloudflare account and a
+running Docker daemon to build and push `./Dockerfile` (`gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120`).
 
 ### Rollback
 
 ```bash
 # Frontend: Cloudflare Pages dashboard → pick a previous deployment and roll back
-# Backend:  Render Dashboard → Manual Deploy → pick a previous commit
+# Backend:  Cloudflare Workers → Deployments → roll back to previous Worker version
 ```
 
 ## Parity troubleshooting
@@ -170,8 +178,8 @@ If `pytest tests/parity` fails on a new commit:
 | Item | Today | At scale |
 |---|---|---|
 | Cloudflare Pages | Static CDN, no server | Fine well past launch traffic |
-| Render web dyno (not live) | 4 workers × 120s timeout | CPU-bound: optimize of a 150-player NBA Monte Carlo takes ~30s with 10k sims |
-| Postgres (not live) | Starter (1 GB / 0.25 CU) | Upgrade to Standard when audit table > ~100k rows |
+| Cloudflare Container + Gunicorn | 4 workers × 120s timeout | CPU-bound: optimize requests run in the container; scales up to `max_instances: 3` |
+| Postgres (`DATABASE_URL`) | External managed Postgres | Upgrade storage/compute independently via `DATABASE_URL` |
 | Solver throttling | 30/min/IP (`OptimizeThrottle`) | Adjust in `config/settings.py` if GTM requires higher |
 
 ## Incident contact

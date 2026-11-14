@@ -13,9 +13,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, Layers, X } from "lucide-react";
 
 import { cn, fmtDecimal, fmtMoney } from "@/lib/utils";
-import { generateStacks, type StackCandidate } from "@/optimizer/stacks";
-import type { StackRule } from "@/optimizer/types";
-import type { Player, Sport } from "@/types";
+import { generateStacks, type StackCandidate } from "@/lib/mavis-stacks";
+import type { Player, Sport, StackRule } from "@/types";
 
 export interface StacksPanelProps {
   /** The sport on screen. Golf has no stacks. */

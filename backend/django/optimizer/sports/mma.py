@@ -14,7 +14,12 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Iterable, Sequence
 
-from ..engines.milp_pulp import Constraint, SolverSpec
+from ..engines.milp_pulp import (
+    Constraint,
+    SolverSpec,
+    StackRulesConstraint,
+    build_stack_rule_bounds,
+)
 from ..schema import Lineup, OptimizerSettings, Player, SlotAssignment
 from .common import lineup_from_solver_result_common
 
@@ -91,6 +96,10 @@ def build_solver_spec(
     if not settings.extras.get("allow_opponents", False):
         bouts = [p.bout for p in players]
         spec.extra_constraints.append(OpponentExclusionConstraint(bouts_per_player=bouts))
+
+    rule_bounds = build_stack_rule_bounds(players, settings.extras.get("stack_rules"))
+    if rule_bounds:
+        spec.extra_constraints.append(StackRulesConstraint(bounds=rule_bounds))
 
     return spec
 

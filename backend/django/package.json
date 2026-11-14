@@ -1,0 +1,12 @@
+{
+  "name": "mavis-fantasy-grinder-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.25"
+  },
+  "devDependencies": {
+    "wrangler": "4.157.0"
+  }
+}

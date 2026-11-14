@@ -19,7 +19,7 @@ const ESPN_PATH: Record<Sport, string> = {
   golf: "golf/pga",
 };
 
-const LABEL: Record<Sport, string> = { nba: "NBA", nfl: "NFL", mma: "UFC", golf: "PGA" };
+const LABEL: Record<Sport, string> = { nba: "NBA", nfl: "NFL", mma: "MMA", golf: "Golf" };
 
 interface Competitor {
   name: string;

@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { generateStacks } from "@/optimizer/stacks";
+import { generateStacks } from "@/lib/mavis-stacks";
 import type { Player } from "@/types";
 
 function nbaPlayer(over: Partial<Player> & Pick<Player, "id" | "name" | "salary" | "projection">): Player {
@@ -17,7 +17,8 @@ function nbaPlayer(over: Partial<Player> & Pick<Player, "id" | "name" | "salary"
     team: "BOS",
     opponent: "NE",
     correlation_group: "BOS@NE",
-    roster_positions: ["PG"],    ...over,
+    roster_positions: ["PG"],
+    ...over,
   };
 }
 
@@ -44,7 +45,8 @@ const mmaPool: Player[] = [
     projection: 22,
     correlation_group: "card-1",
     bout: "Fighter One vs Fighter Two",
-    roster_positions: ["FLEX"],  },
+    roster_positions: ["FLEX"],
+  },
   {
     id: "f2",
     name: "Fighter Two",
@@ -53,7 +55,8 @@ const mmaPool: Player[] = [
     projection: 19,
     correlation_group: "card-1",
     bout: "Fighter One vs Fighter Two",
-    roster_positions: ["FLEX"],  },
+    roster_positions: ["FLEX"],
+  },
   {
     id: "f3",
     name: "Fighter Three",
@@ -62,7 +65,8 @@ const mmaPool: Player[] = [
     projection: 17,
     correlation_group: "card-1",
     bout: "Fighter Three vs Fighter Four",
-    roster_positions: ["FLEX"],  },
+    roster_positions: ["FLEX"],
+  },
   {
     id: "f4",
     name: "Fighter Four",
@@ -71,7 +75,8 @@ const mmaPool: Player[] = [
     projection: 14,
     correlation_group: "card-1",
     bout: "Fighter Three vs Fighter Four",
-    roster_positions: ["FLEX"],  },
+    roster_positions: ["FLEX"],
+  },
 ];
 
 const golfPool: Player[] = [
@@ -82,7 +87,8 @@ const golfPool: Player[] = [
     salary: 9000,
     projection: 18,
     correlation_group: "tour-1",
-    roster_positions: ["FLEX"],  },
+    roster_positions: ["FLEX"],
+  },
 ];
 
 describe("generateStacks — NBA/NFL", () => {
@@ -202,5 +208,34 @@ describe("generateStacks — MMA", () => {
 describe("generateStacks — golf", () => {
   it("produces no stacks", () => {
     expect(generateStacks(golfPool, "golf")).toEqual([]);
+  });
+});
+
+
+describe("generateStacks — NFL slot constraints", () => {
+  const nflPool: Player[] = [
+    { id: "q1", name: "Patrick Mahomes", sport: "nfl", salary: 7400, projection: 23.6, team: "KC", opponent: "BUF", correlation_group: "KC@BUF", positions: ["QB"], roster_positions: ["QB"] },
+    { id: "w1", name: "Rashee Rice", sport: "nfl", salary: 6800, projection: 18.9, team: "KC", opponent: "BUF", correlation_group: "KC@BUF", positions: ["WR"], roster_positions: ["WR", "FLEX"] },
+    { id: "t1", name: "Travis Kelce", sport: "nfl", salary: 6100, projection: 15.9, team: "KC", opponent: "BUF", correlation_group: "KC@BUF", positions: ["TE"], roster_positions: ["TE", "FLEX"] },
+    { id: "q1b", name: "Carson Wentz", sport: "nfl", salary: 4800, projection: 16.5, team: "KC", opponent: "BUF", correlation_group: "KC@BUF", positions: ["QB"], roster_positions: ["QB"] },
+    { id: "q2", name: "Josh Allen", sport: "nfl", salary: 8100, projection: 25.4, team: "BUF", opponent: "KC", correlation_group: "KC@BUF", positions: ["QB"], roster_positions: ["QB"] },
+    { id: "r2", name: "James Cook", sport: "nfl", salary: 6600, projection: 17.5, team: "BUF", opponent: "KC", correlation_group: "KC@BUF", positions: ["RB"], roster_positions: ["RB", "FLEX"] },
+    { id: "w2", name: "Khalil Shakir", sport: "nfl", salary: 5900, projection: 15.2, team: "BUF", opponent: "KC", correlation_group: "KC@BUF", positions: ["WR"], roster_positions: ["WR", "FLEX"] },
+    { id: "d2", name: "Bills DST", sport: "nfl", salary: 2700, projection: 8.5, team: "BUF", opponent: "KC", correlation_group: "KC@BUF", positions: ["DST"], roster_positions: ["DST"] },
+  ];
+
+  it("never places more than 1 QB or a DST inside an NFL stack card", () => {
+    const stacks = generateStacks(nflPool, "nfl");
+    expect(stacks.length).toBeGreaterThan(0);
+    for (const s of stacks) {
+      const qbs = s.players.filter((p) => (p.positions ?? []).includes("QB"));
+      const dsts = s.players.filter((p) => (p.positions ?? []).includes("DST"));
+      expect(qbs.length).toBeLessThanOrEqual(1);
+      expect(dsts.length).toBe(0);
+    }
+    const gStack = stacks.find((s) => s.kind === "game" && s.players.length >= 3);
+    expect(gStack).toBeDefined();
+    expect(gStack!.players.some((p) => p.team === "BUF")).toBe(true);
+    expect(gStack!.players.some((p) => p.team === "KC")).toBe(true);
   });
 });

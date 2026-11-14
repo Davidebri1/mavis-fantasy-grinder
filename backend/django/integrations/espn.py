@@ -171,15 +171,73 @@ def persist_injuries(slate, rows: Iterable[EspnInjuryRow]) -> int:
     return inserted
 
 
-def persist_news(slate, rows: Iterable[EspnNewsRow]) -> int:
-    """Insert ESPN news rows into the database for a slate."""
-    from apps.nba.models import NbaNewsRow
+NFL_SALARY_BANDS: dict[str, dict[str, int]] = {
+    "QB": {"rate": 320, "base": 1800, "floor": 4500, "cap": 9500},
+    "RB": {"rate": 380, "base": 1400, "floor": 3000, "cap": 9000},
+    "FB": {"rate": 380, "base": 1400, "floor": 3000, "cap": 9000},
+    "WR": {"rate": 380, "base": 1500, "floor": 3000, "cap": 9000},
+    "TE": {"rate": 380, "base": 1100, "floor": 2500, "cap": 6500},
+    "DST": {"rate": 420, "base": 700, "floor": 2000, "cap": 4500},
+}
+
+
+def estimate_salary(projection: float, position: str = "", sport: str = "nba") -> int:
+    """Estimated salary model consistent with frontend and README documentation.
+
+    Position-aware floors:
+    - NFL DST: $2,000 floor (cap $4,500)
+    - NFL TE: $2,500 floor (cap $6,500)
+    - NFL RB/WR: $3,000 floor (cap $9,000)
+    - NFL QB: $4,500 floor (cap $9,500)
+    - NBA/General: $3,000 floor, $11,500 cap ($150 * projection + $800, snapped to $100)
+    """
+    pos = position.upper()
+    if sport.lower() == "nfl" and pos in NFL_SALARY_BANDS:
+        band = NFL_SALARY_BANDS[pos]
+        raw = projection * band["rate"] + band["base"]
+        snapped = round(raw / 100) * 100
+        return min(band["cap"], max(band["floor"], snapped))
+
+    raw = projection * 150 + 800
+    snapped = round(raw / 100) * 100
+    return min(11_500, max(3_000, snapped))
+
+
+def persist_nfl_injuries(slate, rows: Iterable[EspnInjuryRow]) -> int:
+    """Insert ESPN injury rows into the database for an NFL slate."""
+    from apps.nfl.models import NflInjuryRow
 
     inserted = 0
     objs = []
     for r in rows:
         objs.append(
-            NbaNewsRow(
+            NflInjuryRow(
+                slate=slate,
+                player_id=r.player_id,
+                name=r.name,
+                team=r.team,
+                status=r.status,
+                severity=r.severity,
+                short_comment=r.short_comment,
+                long_comment=r.long_comment,
+                updated_at=r.updated_at,
+            )
+        )
+    if objs:
+        NflInjuryRow.objects.bulk_create(objs, ignore_conflicts=True)
+        inserted = len(objs)
+    return inserted
+
+
+def persist_nfl_news(slate, rows: Iterable[EspnNewsRow]) -> int:
+    """Insert ESPN news rows into the database for an NFL slate."""
+    from apps.nfl.models import NflNewsRow
+
+    inserted = 0
+    objs = []
+    for r in rows:
+        objs.append(
+            NflNewsRow(
                 slate=slate,
                 player_id=r.player_id,
                 title=r.title,
@@ -189,6 +247,6 @@ def persist_news(slate, rows: Iterable[EspnNewsRow]) -> int:
             )
         )
     if objs:
-        NbaNewsRow.objects.bulk_create(objs, ignore_conflicts=True)
+        NflNewsRow.objects.bulk_create(objs, ignore_conflicts=True)
         inserted = len(objs)
     return inserted

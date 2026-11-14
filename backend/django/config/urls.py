@@ -18,6 +18,7 @@ from drf_spectacular.views import (
 api_patterns = [
     path("", include("apps.common.urls")),
     path("", include("apps.nba.urls")),
+    path("", include("apps.nfl.urls")),
     path("", include("apps.mma.urls")),
     path("", include("apps.golf.urls")),
     path("", include("api.urls")),

@@ -27,7 +27,7 @@ class PlayerInputSerializer(serializers.Serializer):
     # optional and only used by the import preview endpoint which can carry
     # mixed-sport batches.
     sport = serializers.ChoiceField(
-        choices=["nba", "mma", "golf"], required=False, allow_null=True
+        choices=["nba", "nfl", "mma", "golf"], required=False, allow_null=True
     )
     salary = serializers.IntegerField()
     projection = serializers.FloatField(required=False, default=0.0)
@@ -71,12 +71,34 @@ class NbaSettingsSerializer(serializers.Serializer):
     global_min_players_per_team = serializers.IntegerField(required=False, default=0)
     global_max_players_per_team = serializers.IntegerField(required=False, default=0)
     team_stacking_rules = serializers.ListField(required=False, default=list)
+    stack_rules = serializers.ListField(required=False, default=list)
     excluded_teams = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     respect_game_times = serializers.BooleanField(required=False, default=True)
     min_projection = serializers.FloatField(required=False, default=0.0)
     simulation_count = serializers.IntegerField(required=False, default=10_000)
     teammate_correlation = serializers.FloatField(required=False, default=0.35)
     opponent_correlation = serializers.FloatField(required=False, default=0.20)
+
+
+class NflSettingsSerializer(serializers.Serializer):
+    salary_cap = serializers.IntegerField(required=False, default=50_000)
+    num_lineups = serializers.IntegerField(required=False, default=20)
+    contest_type = serializers.ChoiceField(
+        choices=[c.value for c in ContestType], required=False, default=ContestType.CLASSIC.value
+    )
+    strategy = serializers.ChoiceField(
+        choices=[s.value for s in Strategy], required=False, default=Strategy.MONTE_CARLO.value
+    )
+    max_exposure = serializers.FloatField(required=False, default=100.0)
+    max_attempts = serializers.IntegerField(required=False, default=5000)
+    min_projection = serializers.FloatField(required=False, default=0.0)
+    simulation_count = serializers.IntegerField(required=False, default=10_000)
+    qb_wr_te_correlation = serializers.FloatField(required=False, default=0.45)
+    qb_opp_wr_correlation = serializers.FloatField(required=False, default=0.25)
+    qb_opp_dst_correlation = serializers.FloatField(required=False, default=-0.60)
+    teammate_correlation = serializers.FloatField(required=False, default=0.20)
+    global_max_players_per_team = serializers.IntegerField(required=False, default=0)
+    stack_rules = serializers.ListField(required=False, default=list)
 
 
 class MmaSettingsSerializer(serializers.Serializer):
@@ -92,6 +114,7 @@ class MmaSettingsSerializer(serializers.Serializer):
     simulation_count = serializers.IntegerField(required=False, default=10_000)
     opponent_correlation = serializers.FloatField(required=False, default=-0.40)
     card_correlation = serializers.FloatField(required=False, default=0.10)
+    stack_rules = serializers.ListField(required=False, default=list)
 
 
 class GolfSettingsSerializer(serializers.Serializer):
@@ -106,7 +129,7 @@ class GolfSettingsSerializer(serializers.Serializer):
 
 
 class OptimizeRequestSerializer(serializers.Serializer):
-    sport = serializers.ChoiceField(choices=["nba", "mma", "golf"])
+    sport = serializers.ChoiceField(choices=["nba", "nfl", "mma", "golf"])
     solver_backend = serializers.ChoiceField(
         choices=["pulp", "ortools"], required=False, default="pulp"
     )

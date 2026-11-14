@@ -37,12 +37,26 @@ function toNumber(value: string | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function rosterPositions(pos: string | undefined): string[] {
-  if (!pos) return ["UTIL"];
+function rosterPositions(pos: string | undefined, sport: Sport): string[] {
+  if (!pos) return sport === "nfl" ? ["FLEX"] : ["UTIL"];
   const parts = pos
     .split(/[\/,|&\s-]+/)
     .map((p) => p.trim().toUpperCase())
     .filter(Boolean);
+  if (sport === "nfl") {
+    const out = new Set<string>();
+    for (const p of parts) {
+      if (p === "QB" || p === "DST" || p === "D" || p === "DEF") {
+        out.add(p === "D" || p === "DEF" ? "DST" : "QB");
+      } else if (p === "RB" || p === "FB" || p === "WR" || p === "TE") {
+        out.add(p === "FB" ? "RB" : p);
+        out.add("FLEX");
+      } else if (p === "FLEX") {
+        out.add("FLEX");
+      }
+    }
+    return out.size > 0 ? [...out] : ["FLEX"];
+  }
   const known = ["PG", "SG", "SF", "PF", "C"];
   const out = new Set<string>(["UTIL"]);
   for (const p of parts) {
@@ -84,7 +98,7 @@ export function rowsToPlayers(rows: ParsedRow[], sport: Sport): Player[] {
       opponent,
       game_info: gameInfo,
       positions: pos ? [pos] : undefined,
-      roster_positions: rosterPositions(pos),
+      roster_positions: rosterPositions(pos, sport),
       correlation_group: gameInfo,
       photo_url: null,
     });

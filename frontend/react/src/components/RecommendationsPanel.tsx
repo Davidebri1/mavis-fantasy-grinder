@@ -27,6 +27,11 @@ export function RecommendationsPanel({ sport, lineups }: Props) {
   const [active, setActive] = useState<ContestProfile>(presets[0]);
   const [maxEntries, setMaxEntries] = useState<number>(3);
 
+  const picks = useMemo(
+    () => (lineups.length > 0 ? recommendPicks(lineups, active, maxEntries) : []),
+    [lineups, active, maxEntries],
+  );
+
   if (lineups.length === 0) {
     return (
       <Card className="p-5" title="Smart Recommendations">
@@ -37,11 +42,6 @@ export function RecommendationsPanel({ sport, lineups }: Props) {
       </Card>
     );
   }
-
-  const picks = useMemo(
-    () => recommendPicks(lineups, active, maxEntries),
-    [lineups, active, maxEntries],
-  );
 
   const totalCost = picks.length * active.entryFee;
   const affordable = totalCost <= active.bankroll;

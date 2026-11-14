@@ -22,7 +22,12 @@ from typing import Sequence
 
 import pulp
 
-from ..engines.milp_pulp import Constraint, SolverSpec
+from ..engines.milp_pulp import (
+    Constraint,
+    SolverSpec,
+    StackRulesConstraint,
+    build_stack_rule_bounds,
+)
 from ..schema import (
     ContestType,
     Lineup,
@@ -271,6 +276,9 @@ def _build_classic_spec(
         spec.extra_constraints.append(
             BringBackConstraint(games_in_lineup_min=bring_back_count)
         )
+    rule_bounds = build_stack_rule_bounds(players, settings.extras.get("stack_rules"))
+    if rule_bounds:
+        spec.extra_constraints.append(StackRulesConstraint(bounds=rule_bounds))
     return spec
 
 

@@ -18,12 +18,13 @@ from typing import Any, Iterable, Sequence
 
 class Sport(str, Enum):
     NBA = "nba"
+    NFL = "nfl"
     MMA = "mma"
     GOLF = "golf"
 
 
 class ContestType(str, Enum):
-    """NBA-only. MMA and Golf have fungible slots and ignore this."""
+    """NBA and NFL. MMA and Golf have fungible slots and ignore this."""
 
     CLASSIC = "classic"
     SHOWDOWN = "showdown"

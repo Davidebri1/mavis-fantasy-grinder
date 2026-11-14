@@ -1156,21 +1156,33 @@ async function fetchLiveNflPool(): Promise<LivePool> {
   const bundleByTeam = new Map<string, NflTeamBundle>();
   [...teamIds].forEach((id, i) => bundleByTeam.set(id, bundles[i]));
 
+  const NFL_ABBR_NORMALIZE: Record<string, string> = {
+    WSH: "WAS",
+    JAC: "JAX",
+    LA: "LAR",
+  };
+  const normNflAbbr = (raw?: string): string => {
+    const up = (raw ?? "").trim().toUpperCase();
+    return NFL_ABBR_NORMALIZE[up] ?? up;
+  };
+
   const players: Player[] = [];
   for (const ev of events) {
     const comp = ev.competitions?.[0];
     const competitors = comp?.competitors ?? [];
     const away = competitors.find((c) => c.homeAway === "away");
     const home = competitors.find((c) => c.homeAway === "home");
-    const gameKey = `${away?.team?.abbreviation ?? "AWY"}@${home?.team?.abbreviation ?? "HOM"}`;
+    const awayAbbr = normNflAbbr(away?.team?.abbreviation) || "AWY";
+    const homeAbbr = normNflAbbr(home?.team?.abbreviation) || "HOM";
+    const gameKey = `${awayAbbr}@${homeAbbr}`;
     const tip = formatTip(comp?.date ?? ev.date);
 
     for (const side of [away, home]) {
       if (!side?.team?.id) continue;
       const bundle = bundleByTeam.get(side.team.id);
       if (!bundle) continue;
-      const teamAbbr = side.team.abbreviation ?? "???";
-      const opponentAbbr = side === away ? home?.team?.abbreviation : away?.team?.abbreviation;
+      const teamAbbr = normNflAbbr(side.team.abbreviation) || "???";
+      const opponentAbbr = side === away ? homeAbbr : awayAbbr;
 
       for (const athlete of bundle.athletes.values()) {
         const espnId = athlete.id!;

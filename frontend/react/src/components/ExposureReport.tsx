@@ -16,7 +16,7 @@ import { cn, fmtDecimal } from "@/lib/utils";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PositionBadge, positionBadgeFor } from "./PlayerDrawer";
 import { TeamCrest } from "./TeamCrest";
-import { slotBuckets } from "@/optimizer/sports";
+import { normalizeSlotLabel, slotBuckets } from "@/lib/mavis-slots";
 import type { Lineup, Player } from "@/types";
 
 type Mode = "players" | "teams";
@@ -26,8 +26,8 @@ interface Exposure {
   byPlayer: Map<string, number>;
   /** Team → share of the portfolio that contains them. */
   byTeam: Map<string, number>;
-  /** Player id → the slot labels they occupied. */
-  slotsByPlayer: Map<string, Set<string>>;
+  /** Normalized slot label → (player id → share of lineups in that specific slot). */
+  bySlot: Map<string, Map<string, number>>;
 }
 
 export function computeExposure(
@@ -36,19 +36,25 @@ export function computeExposure(
 ): Exposure {
   const playerCount = new Map<string, number>();
   const teamCount = new Map<string, number>();
-  const slotsByPlayer = new Map<string, Set<string>>();
+  const slotPlayerCount = new Map<string, Map<string, number>>();
   const total = lineups.length;
 
   for (const lineup of lineups) {
     const teamsHere = new Set<string>();
+    const playersHere = new Set<string>();
     for (const a of lineup.assignments) {
-      playerCount.set(a.player_id, (playerCount.get(a.player_id) ?? 0) + 1);
-      let slots = slotsByPlayer.get(a.player_id);
-      if (!slots) {
-        slots = new Set<string>();
-        slotsByPlayer.set(a.player_id, slots);
+      if (!playersHere.has(a.player_id)) {
+        playersHere.add(a.player_id);
+        playerCount.set(a.player_id, (playerCount.get(a.player_id) ?? 0) + 1);
       }
-      slots.add(a.slot);
+      const normSlot = normalizeSlotLabel(a.slot);
+      let mapForSlot = slotPlayerCount.get(normSlot);
+      if (!mapForSlot) {
+        mapForSlot = new Map<string, number>();
+        slotPlayerCount.set(normSlot, mapForSlot);
+      }
+      mapForSlot.set(a.player_id, (mapForSlot.get(a.player_id) ?? 0) + 1);
+
       const p = byId.get(a.player_id);
       if (p?.team) teamsHere.add(p.team);
     }
@@ -65,7 +71,15 @@ export function computeExposure(
   for (const [t, n] of teamCount) {
     byTeam.set(t, total > 0 ? (n / total) * 100 : 0);
   }
-  return { byPlayer, byTeam, slotsByPlayer };
+  const bySlot = new Map<string, Map<string, number>>();
+  for (const [slotLabel, counts] of slotPlayerCount) {
+    const pcts = new Map<string, number>();
+    for (const [id, n] of counts) {
+      pcts.set(id, total > 0 ? (n / total) * 100 : 0);
+    }
+    bySlot.set(slotLabel, pcts);
+  }
+  return { byPlayer, byTeam, bySlot };
 }
 
 export function ExposureReport({
@@ -100,19 +114,18 @@ export function ExposureReport({
     return null;
   }
 
-  // For the player view each column is the players who filled that slot.
+  // For the player view each column shows the players who filled that specific slot
+  // with slot-specific share (appearances in that slot / lineups.length * 100).
   const columnEntries = (slot: string | null): { id: string; label: string; pct: number }[] => {
     if (mode === "teams") {
       return [...exposure.byTeam.entries()]
         .map(([id, pct]) => ({ id, label: id, pct }))
         .sort((a, b) => b.pct - a.pct);
     }
+    const sourceMap = slot === null ? exposure.byPlayer : exposure.bySlot.get(slot);
+    if (!sourceMap) return [];
     const rows: { id: string; label: string; pct: number }[] = [];
-    for (const [id, pct] of exposure.byPlayer) {
-      if (slot !== null) {
-        const used = exposure.slotsByPlayer.get(id);
-        if (!used || !used.has(slot)) continue;
-      }
+    for (const [id, pct] of sourceMap) {
       const p = byId.get(id);
       rows.push({ id, label: p?.name ?? id, pct });
     }

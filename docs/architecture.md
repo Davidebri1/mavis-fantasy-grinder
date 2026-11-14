@@ -2,11 +2,13 @@
 
 Target system shape: React single-page app talking to a Django REST API + Postgres.
 
-> **What is live (2026-11-04):** the React SPA is on **Cloudflare Pages**
-> (<https://mavis-fantasy-grinder.pages.dev>) and runs **standalone** — the in-browser optimizer,
-> live ESPN data, no API calls to a backend. The Django + Postgres half below is in the repo and
-> CI-tested but **not deployed**. The diagram shows the target; the live deployment is the SPA box
-> alone, with ESPN's public API as its only network dependency.
+> **Current architecture (2026-11-14):** the React SPA on **Cloudflare Pages**
+> (<https://mavis-fantasy-grinder.pages.dev>) calls the **Django REST API** configured for
+> **Cloudflare Containers + Worker proxy** (`backend/django/wrangler.jsonc`, `Dockerfile`,
+> `worker/mavis-container-proxy.mjs`, forwarding to Gunicorn on port `8000`) via `VITE_API_URL`.
+> Client-side solver code has been removed from the browser bundle; ESPN live feed ingestion runs
+> in the browser while all optimization (`/api/optimize/`), slates/players (`/api/slates/`,
+> `/api/players/`), and exports (`/api/export/*`) execute server-side across NBA, NFL, MMA, and Golf.
 
 ## Why React (instead of keeping Flutter web)
 
@@ -17,8 +19,8 @@ Target system shape: React single-page app talking to a Django REST API + Postgr
 ## Why Django (instead of keeping Supabase)
 
 - Self-hosted Postgres gives the customer full ownership of slate/projection data with no per-row pricing.
-- Django lets us colocate the optimizer compute with the database — important because the optimizer is CPU-bound and can run in the same request or be offloaded to Celery without crossing a vendor boundary.
-- Trade-off: we own uptime, scaling, and backups. Mitigated by Render's managed Postgres + automated backups.
+- Django lets us colocate the optimizer compute with the database — important because the optimizer is CPU-bound and can run in the same request or be offloaded without crossing a vendor boundary.
+- Trade-off: container cold starts on serverless infrastructure, mitigated by `sleepAfter: "15m"` in Cloudflare Containers + Worker proxy.
 
 ## High-level layout
 
@@ -26,17 +28,17 @@ Target system shape: React single-page app talking to a Django REST API + Postgr
 ┌─────────────────────────────────────────────────────────────────┐
 │  Customer browser (Cloudflare Pages)                             │
 │  └── React SPA (Vite + TS + Tailwind + shadcn/ui)              │
-│      ├── Routes: /, /nba, /nba/admin, /mma, /golf              │
+│      ├── Routes: /, /nba, /nfl, /nba/admin, /mma, /golf        │
 │      ├── TanStack Query   → server state                       │
 │      ├── Zustand          → local UI state                     │
 │      └── TanStack Table   → player pool grids                  │
 └─────────────────────────────────────────────────────────────────┘
-                │ HTTPS / JSON
+                │ HTTPS / JSON (VITE_API_URL)
                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Render (Django REST API)                                       │
+│  Cloudflare Worker Proxy + Container (Django REST API)           │
 │  ├── Django 5 + Django REST Framework                           │
-│  ├── Gunicorn (4 workers)                                       │
+│  ├── Gunicorn (4 workers, port 8000, timeout 120s)              │
 │  ├── Endpoints:                                                 │
 │  │    /api/slates/        GET, POST                             │
 │  │    /api/players/       GET (sport-keyed)                     │
@@ -57,15 +59,17 @@ Target system shape: React single-page app talking to a Django REST API + Postgr
 │       │    └── monte_carlo.py                                  │
 │       ├── sports/                                               │
 │       │    ├── nba.py        (Classic + Showdown)               │
+│       │    ├── nfl.py        (Classic + Showdown)               │
 │       │    ├── mma.py                                           │
 │       │    └── golf.py                                         │
 │       └── strategies.py       (5 strategies, pluggable solvers) │
 └─────────────────────────────────────────────────────────────────┘
-                │ psycopg / Django ORM
+                │ psycopg / Django ORM (DATABASE_URL)
                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Render Postgres                                                │
-│  Tables: slates, nba_projection_rows, mma_projection_rows,      │
+│  PostgreSQL                                                     │
+│  Tables: slates, nba_projection_rows, nfl_projection_rows,      │
+│          nfl_injury_rows, nfl_news_rows, mma_projection_rows,   │
 │          nba_injury_rows, nba_news_rows, golf_projection_rows,  │
 │          optimization_runs, slate_state                         │
 └─────────────────────────────────────────────────────────────────┘
@@ -118,14 +122,13 @@ POST /api/optimize
 
 | Var | Owner | Purpose |
 |---|---|---|
-| `DATABASE_URL` | Render | Postgres connection string |
-| `DJANGO_SECRET_KEY` | Render | Django session signing |
-| `DJANGO_DEBUG` | Render | `0` in prod |
-| `DJANGO_ALLOWED_HOSTS` | Render | The Pages origin hostname |
-| `CORS_ALLOWED_ORIGINS` | Render | The Pages URL |
-| `ODDS_API_KEY` | Render | The Odds API |
-| `ESPN_*` | Render | future — not in v1 |
-| `SUPABASE_MIGRATE_TOKEN` | Render (one-shot) | used by data migration script only |
+| `DATABASE_URL` | Cloudflare Container Secret | Postgres connection string |
+| `DJANGO_SECRET_KEY` | Cloudflare Container Secret | Django session signing |
+| `DJANGO_DEBUG` | Cloudflare Worker Var | `false` in prod |
+| `DJANGO_ALLOWED_HOSTS` | Cloudflare Worker Var | Allowed API/Container hostnames |
+| `CORS_ALLOWED_ORIGINS` | Cloudflare Worker Var | Allowed frontend origins (`https://mavis-fantasy-grinder.pages.dev`) |
+| `ODDS_API_KEY` | Cloudflare Container Secret | The Odds API |
+| `VITE_API_URL` | Frontend build env | Base URL of Django Worker `/api` endpoint |
 
 ## Out of v1
 

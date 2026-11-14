@@ -18,6 +18,7 @@ import {
 } from "@/types";
 import { fetchLivePool, type LiveGame } from "@/lib/espn-live";
 import { parseDraftables } from "@/lib/dk-draftables";
+import { fetchApiPlayers, fetchApiSlates } from "@/lib/mavis-api";
 import dkShowdownJaxBal from "@/assets/dk-showdown-jax-bal.json";
 import {
   buildGolfSample,
@@ -25,9 +26,9 @@ import {
   buildNbaSample,
   buildNflSample,
   sampleHeadshotCache,
-} from "@/optimizer/sample";
+  type SamplePlayer,
+} from "@/lib/mavis-sample";
 import { seedHeadshotCache, prefetchHeadshots } from "@/components/PlayerAvatar";
-import type { Player as EnginePlayer } from "@/optimizer";
 
 /**
  * The bundled DraftKings slate — real published prices and DK's own
@@ -41,15 +42,15 @@ const DK_SEED_NFL: Player[] = parseDraftables(
   "nfl",
 ).map((p) => ({ ...p, salary_source: "dk" as const }));
 
-/** Engine-shape player → wire-shape player (snake_case) with photo kept. */
-function toWire(p: EnginePlayer): Player {
+/** Sample-shape player → wire-shape player (snake_case) with photo kept. */
+function toWire(p: SamplePlayer): Player {
   return {
     id: p.id,
     name: p.name,
     sport: p.sport,
     salary: p.salary,
     projection: p.projection,
-    user_projection: p.userProjection ?? null,
+    user_projection: null,
     team: p.team,
     opponent: p.opponent,
     game_info: p.gameInfo,
@@ -58,16 +59,32 @@ function toWire(p: EnginePlayer): Player {
     correlation_group: p.correlationGroup,
     opponent_id: p.opponentId,
     bout: p.bout,
-    is_locked: p.isLocked,
-    is_excluded: p.isExcluded,
-    is_liked: p.isLiked,
-    injury_status: p.injuryStatus ?? null,
     photo_url: p.photoUrl ?? null,
-    jersey: p.jersey ?? null,
+    jersey: null,
   };
 }
 
+function gamesFromPlayers(players: Player[]): LiveGame[] {
+  const seen = new Map<string, LiveGame>();
+  for (const p of players) {
+    const key = p.correlation_group || p.game_info;
+    if (!key) continue;
+    const label = key.includes("@") ? key.split(" ")[0].replace("@", " @ ") : key;
+    if (!seen.has(label)) {
+      seen.set(label, {
+        id: label,
+        label,
+        startTime: p.game_time ?? null,
+        state: "pre",
+        detail: p.game_info ?? "",
+      });
+    }
+  }
+  return [...seen.values()];
+}
+
 export type LiveStatus = "idle" | "loading" | "live" | "empty" | "offline";
+export type ApiStatus = "idle" | "loading" | "ready" | "error";
 
 /**
  * Where the roster currently on screen came from.
@@ -98,6 +115,11 @@ interface AppState {
   lastSyncedAt: Record<string, string | null>;
   /** Pull the live slate from ESPN and swap it into the pool. */
   loadLive: (sport: Sport) => Promise<void>;
+
+  // Django backend API state
+  apiStatus: Record<string, ApiStatus>;
+  apiError: Record<string, string | null>;
+  loadFromApi: (sport: Sport) => Promise<boolean>;
 
   // Settings per sport
   nbaSettings: NbaSettings;
@@ -170,6 +192,60 @@ export const useAppStore = create<AppState>()(
       liveGames: {},
       liveWarnings: {},
       lastSyncedAt: {},
+      apiStatus: {},
+      apiError: {},
+
+      loadFromApi: async (sport) => {
+        set((s) => ({
+          apiStatus: { ...s.apiStatus, [sport]: "loading" },
+          apiError: { ...s.apiError, [sport]: null },
+        }));
+        try {
+          const slates = await fetchApiSlates(sport);
+          const preferred = slates.find((sl) => sl.is_active) ?? slates[0];
+          const apiPlayers = await fetchApiPlayers(sport, preferred?.id);
+          if (preferred?.id !== undefined) {
+            get().setActiveSlateId(sport, String(preferred.id));
+          }
+          if (apiPlayers.length > 0) {
+            const withSport = apiPlayers.map((p) => ({
+              ...p,
+              sport,
+              salary_source: (p.salary > 0 ? "dk" : "none") as Player["salary_source"],
+            }));
+            set((s) => ({
+              players: { ...s.players, [sport]: withSport },
+              rosterSource: { ...s.rosterSource, [sport]: "dk" as RosterSource },
+              liveGames: {
+                ...s.liveGames,
+                [sport]:
+                  s.liveGames[sport]?.length
+                    ? s.liveGames[sport]
+                    : gamesFromPlayers(withSport),
+              },
+              apiStatus: { ...s.apiStatus, [sport]: "ready" },
+              apiError: { ...s.apiError, [sport]: null },
+            }));
+            void prefetchHeadshots(withSport.map((p) => p.name));
+            return true;
+          }
+          set((s) => ({
+            apiStatus: { ...s.apiStatus, [sport]: "ready" },
+            apiError: { ...s.apiError, [sport]: null },
+          }));
+          return false;
+        } catch (err) {
+          const msg =
+            err instanceof Error
+              ? err.message
+              : "Optimizer backend API is unreachable.";
+          set((s) => ({
+            apiStatus: { ...s.apiStatus, [sport]: "error" },
+            apiError: { ...s.apiError, [sport]: msg },
+          }));
+          return false;
+        }
+      },
 
       /**
        * Pull the live slate from ESPN and swap it into the pool.

@@ -2,12 +2,16 @@
  * Lineup count picker — how many lineups to build.
  *
  * The counts are the ones a daily contest actually uses: 2 for a double, 20
- * for a mid-size multi, 150 for the maximum a contest site will take. A
- * custom field goes up to 2000 for the big ones.
+ * for a mid-size multi, 150 for the maximum a contest site will take. The
+ * big-ticket sizes (250, 500, 1000, 2000) are one click because they are
+ * the ones that cannot be typed quickly and the ones that need measuring.
+ * A custom field covers anything in between, up to 2000.
  */
 import { cn } from "@/lib/utils";
 
-const PRESETS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100, 125, 150];
+const PRESETS = [
+  1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100, 125, 150, 250, 500, 1000, 2000,
+];
 
 export const MAX_LINEUPS = 2000;
 

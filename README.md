@@ -60,10 +60,13 @@ DraftKings draftables file. Those are DraftKings' numbers, not this app's.
 - **Projections** carry their source on every row: "DraftKings projection", "Rotowire projection",
   "My projection", "Season-average (est.)" or "My projection (edited)".
 
-**The ROI estimate is a model.** It is built from this app's projections, the contest settings you
-enter, and a payout model that puts 70% of the prize pool on first place. It is labelled "est. ROI
-(model)" in the UI, and every pick also shows its modelled cash rate. It is not a DraftKings payout
-projection and it is not a promise.
+- **Salary estimation floors (display only when DraftKings prices are absent):** `salary_estimate`
+  uses position-aware floors (`$2,000` DST, `$2,500` TE, `$3,000` RB/WR, `$4,500` QB for NFL;
+  `$150 × projection + $800` with `$3,000` floor and `$11,500` cap for NBA) and is kept strictly
+  separate from the `salary` field sent to the solver.
+- **The ROI estimate is a model.** It uses a calibrated normal score distribution (z-score relative
+  to the simulated contest field, entry fee, max entries, and a top-heavy payout curve) labelled
+  "est. ROI (model)" in the UI alongside modelled cash rate. It is not a DraftKings payout promise.
 
 **Sample data is loud.** If the live ESPN feed cannot be reached, the app falls back to a bundled
 sample roster — and it says so in an amber banner across the top of the screen, not in a quiet
@@ -90,33 +93,32 @@ One solver, three objectives, two simulation modes.
 - **Off** — one exact solve of the roster. The fastest path.
 - **Monte Carlo** — 1k–10k correlated outcome samples, one solve each, best unique lineups kept.
 
-**Portfolio and stacking** are real constraints, not decoration:
+**Portfolio and stacking** are real constraints enforced server-side on the Django REST API:
 
-- `portfolio.ts` is a best-first branch-and-bound search with an LP bound on the remaining space.
-  On a 421-player NFL pool it reproduces the exact brute-force optimum (134) over all 148,318 legal
-  rosters, and a projection bump is swapped into the lineup immediately.
-- Stack rules are enforced, not suggested. 150 lineups built against an LV@SF rule all held at least
-  four LV@SF players; after the rule was changed, 0 of 150 survived it.
-- Exposure is computed from the finished portfolio and independently recounted against the same
-  numbers.
-- When a rule cannot be met — an infeasible cap, an impossible stack — the app says so instead of
-  quietly returning a lineup that violates it.
+- Optimization runs exclusively via Django (`/api/optimize/`) backed by PuLP + CBC and OR-Tools
+  CP-SAT across NBA, NFL, MMA, and Golf (Classic and Showdown). Solver code is not shipped to the
+  client browser bundle.
+- Stack rules (max 1 QB per stack card, game stacks, and hard QB vs. opposing DST mutual exclusion)
+  and strict max-exposure pruning on short portfolios are enforced on every solve.
+- Exposure is computed per assigned slot directly from the returned lineup list.
+- When a rule cannot be met — an infeasible cap, an impossible stack — the API returns explicit
+  diagnostics instead of silently returning invalid lineups.
 
 **Stacks** (targeting a game, a position, or a team) are a first-class control, and the "Stacks" tab
-shows the exposure of every stack you built.
+shows valid slot-aware stacks you can apply with one click.
 
 ---
 
-## What this app does not do
+## Architecture overview
 
-Stated plainly, because a customer shipping this to other people needs to know the edges:
-
-- **The Django backend is not deployed.** The live site is the frontend on Cloudflare Pages, running
-  the in-browser optimizer. The backend exists in this repo, is covered by CI, and is one Render
-  Blueprint (`backend/django/render.yaml`) away from running — but nothing on the live site calls it
-  today.
+- **Frontend (`frontend/react/`)**: React + TypeScript + Tailwind SPA deployed on Cloudflare Pages,
+  calling `/api/slates/`, `/api/players/`, `/api/optimize/`, and `/api/export/*` via `VITE_API_URL`,
+  plus browser-side ESPN live feed ingestion.
+- **Backend (`backend/django/`)**: Django 5 + DRF + Gunicorn packaged for Cloudflare Containers +
+  Worker proxy (`Dockerfile`, `wrangler.jsonc`, `worker/mavis-container-proxy.mjs`). Requires a
+  Cloudflare Workers Paid plan with Containers enabled and Docker to build/push the image.
 - **No contest data, and no ownership data.** DraftKings salaries and projections come from the
-  DraftKings slate or your import; contest results and ownership do not exist yet. See *What is
+  DraftKings slate or your import; live contest payout results do not exist yet. See *What is
   real, and what is modelled* above.
 - **No accounts, no login, no payment.** State is per-device via `localStorage`.
 - **No live contest results.** Nothing here is connected to a real contest after you enter it.
@@ -138,18 +140,20 @@ node scripts/mavis-verify-deploy.mjs            # SHA256 every asset, local vs l
 live HTML actually references, hashes them, and compares against the local `dist/`. A deploy is
 "done" when that script passes — not when a command returns zero.
 
-### The Django backend (optional, not live)
+### The Django backend (Cloudflare Containers + Worker)
 
 ```bash
 cd backend/django
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py runserver
+python manage.py load_sample_data
+gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
 ```
 
-`backend/django/render.yaml` provisions the web service and Postgres on Render. `config/settings.py`
-reads `DATABASE_URL` (password URL-decoded, `sslmode` honoured) and falls back to the individual
-`PG*` variables.
+`backend/django/wrangler.jsonc`, `backend/django/Dockerfile`, and `backend/django/worker/mavis-container-proxy.mjs`
+deploy the Django API to Cloudflare Containers (`DATABASE_URL`, `DJANGO_SECRET_KEY`, `ODDS_API_KEY`,
+`DJANGO_ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`). `config/settings.py` reads `DATABASE_URL` (password
+URL-decoded, `sslmode` honoured) and falls back to individual `PG*` variables or SQLite for local dev.
 
 `requirements.txt` pins `pulp>=2.8,<3`. PuLP 4 is a Rust-backed rewrite whose `LpVariable` no longer
 takes `(name, cat="Binary")`; the solver here is written against the 2.x API. Porting to PuLP 4 is a
@@ -179,12 +183,12 @@ pwsh bin/dev.ps1         # Windows  |  ./bin/dev  # macOS/Linux
 ## Repository layout
 
 ```
-frontend/react/            the app — this is what ships
-  src/optimizer/           solver, portfolio, stacks, worker
-  src/lib/espn-live.ts     live ESPN fetch + the estimated-salary layer (display only)
+frontend/react/            the React SPA (no solver shipped to the browser)
+  src/lib/mavis-api.ts     Django REST client (VITE_API_URL)
+  src/lib/espn-live.ts     live ESPN fetch + position-aware salary_estimate (display only)
   src/lib/data-provenance.ts   one place that says what is real and what is modelled
   scripts/mavis-*.mjs      deploy, verify, layout-check tooling
-backend/django/            Django + Postgres service (CI-tested, not deployed)
+backend/django/            Django + Postgres service + PuLP/OR-Tools optimizer (Cloudflare Containers)
 docs/wiki/                 the project wiki — see docs/wiki/mavis-index.md
 docs/architecture.md       system shape and data flow
 ```

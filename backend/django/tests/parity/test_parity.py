@@ -69,6 +69,16 @@ def _build_settings(sport: Sport, settings_dict: dict) -> OptimizerSettings:
                 "excluded_teams": set(settings_dict.get("excluded_teams", [])),
             }
         )
+    if sport == Sport.NFL:
+        base.contest_type = ContestType(settings_dict.get("contest_type", "classic"))
+        base.extras.update(
+            {
+                "qb_wr_te_correlation": settings_dict.get("qb_wr_te_correlation", 0.45),
+                "qb_opp_wr_correlation": settings_dict.get("qb_opp_wr_correlation", 0.25),
+                "qb_opp_dst_correlation": settings_dict.get("qb_opp_dst_correlation", -0.60),
+                "teammate_correlation": settings_dict.get("teammate_correlation", 0.20),
+            }
+        )
     if sport == Sport.MMA:
         base.extras.update(
             {

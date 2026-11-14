@@ -136,6 +136,66 @@ def build_nba_correlation(
     return matrix
 
 
+def build_nfl_correlation(
+    *,
+    teams: list[str],
+    opponents: list[str],
+    positions: list[list[str]],
+    n: int,
+    qb_wr_te_corr: float = 0.45,
+    qb_opp_wr_corr: float = 0.25,
+    qb_opp_dst_corr: float = -0.60,
+    teammate_corr: float = 0.20,
+) -> np.ndarray:
+    """Build the NFL correlation matrix.
+
+    - QB with teammate WR or TE: +0.45
+    - QB with opposing WR bring-back: +0.25
+    - QB with opposing DST: -0.60 (strongly anti-correlated)
+    - General teammate correlation: +0.20
+    """
+    matrix = np.eye(n)
+    if n == 0:
+        return matrix
+
+    pos_sets = [set(p) for p in positions]
+
+    def has_pos(idx: int, *pos: str) -> bool:
+        return bool(pos_sets[idx].intersection(pos))
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            t_i, t_j = teams[i], teams[j]
+            o_i, o_j = opponents[i], opponents[j]
+
+            is_same_team = bool(t_i and t_i == t_j)
+            is_opponents = bool(t_i and o_i and t_i == o_j and t_j == o_i)
+
+            if is_same_team:
+                if (has_pos(i, "QB") and has_pos(j, "WR", "TE")) or (
+                    has_pos(j, "QB") and has_pos(i, "WR", "TE")
+                ):
+                    rho = qb_wr_te_corr
+                else:
+                    rho = teammate_corr
+            elif is_opponents:
+                if (has_pos(i, "QB") and has_pos(j, "DST")) or (
+                    has_pos(j, "QB") and has_pos(i, "DST")
+                ):
+                    rho = qb_opp_dst_corr
+                elif (has_pos(i, "QB") and has_pos(j, "WR")) or (
+                    has_pos(j, "QB") and has_pos(i, "WR")
+                ):
+                    rho = qb_opp_wr_corr
+                else:
+                    rho = 0.0
+            else:
+                rho = 0.0
+
+            matrix[i, j] = matrix[j, i] = rho
+    return matrix
+
+
 def build_mma_correlation(
     *,
     bout_pairs: list[tuple[str, str]],

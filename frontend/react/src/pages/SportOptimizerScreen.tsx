@@ -13,7 +13,7 @@
  * lineups, exposure, the player pool, and what to enter.
  */
 import { salaryIsReal } from "@/lib/real-salaries";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download, PlayCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
 
 import { EspnSyncPanel } from "@/components/EspnSyncPanel";
@@ -48,15 +48,8 @@ import {
   setExportPlayers,
 } from "@/lib/export-client";
 import { cn, fmtDecimal, fmtMoney } from "@/lib/utils";
-import {
-  NBA_CLASSIC_SLOTS,
-  NBA_SHOWDOWN_SLOTS,
-  NFL_CLASSIC_SLOTS,
-  type RosterSlot,
-} from "@/optimizer/sports";
-import type { Lineup as EngineLineup, Player as EnginePlayer } from "@/optimizer";
-import type { StackCandidate } from "@/optimizer/stacks";
-import type { OptimizerSettings } from "@/optimizer/types";
+import { slotsForSport, type RosterSlot } from "@/lib/mavis-slots";
+import type { StackCandidate } from "@/lib/mavis-stacks";
 import type { Lineup, Player } from "@/types";
 
 const TITLE: Record<Sport, string> = {
@@ -76,65 +69,16 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "pool", label: "Player pool" },
 ];
 
-function toEngine(p: Player): EnginePlayer {
-  return {
-    id: p.id,
-    name: p.name,
-    sport: p.sport,
-    // Only a real published price is ever handed to the solver.
-    salary: salaryIsReal(p) ? p.salary : 0,
-    projection: p.projection,
-    userProjection: p.user_projection ?? p.projection,
-    team: p.team,
-    opponent: p.opponent,
-    gameInfo: p.game_info,
-    positions: p.positions,
-    rosterPositions: p.roster_positions,
-    correlationGroup: p.correlation_group,
-    opponentId: p.opponent_id,
-    bout: p.bout,
-    isLocked: p.is_locked,
-    isExcluded: p.is_excluded,
-    isLiked: p.is_liked,
-    injuryStatus: p.injury_status,
-    photoUrl: p.photo_url,
-  };
-}
-
-/** Engine-shape lineup (camelCase) -> wire-shape lineup (snake_case). */
-function toWire(l: EngineLineup): Lineup {
-  return {
-    assignments: l.assignments.map((a) => ({
-      slot: a.slot,
-      score_multiplier: a.scoreMultiplier,
-      player_id: a.playerId,
-      player_name: a.playerName,
-    })),
-    strategy: l.strategy as Lineup["strategy"],
-    solver_backend: l.solverBackend as Lineup["solver_backend"],
-    rank: l.rank,
-    total_salary: l.totalSalary,
-    total_projection: l.totalProjection,
-    total_ceiling: l.totalCeiling,
-    teams: l.teams,
-    games: l.games,
-    unique_key: l.uniqueKey,
-  };
-}
-
 /** The roster slots the exposure report is broken down by. */
 function slotsFor(sport: Sport, contestType: "classic" | "showdown"): RosterSlot[] {
-  if (sport === "nba") {
-    return contestType === "showdown" ? NBA_SHOWDOWN_SLOTS : NBA_CLASSIC_SLOTS;
-  }
-  if (sport === "nfl") return NFL_CLASSIC_SLOTS;
-  return [{ label: "FLEX", accepts: null }];
+  return slotsForSport(sport, contestType);
 }
 
 export function SportOptimizerScreen({ sport }: { sport: Sport }) {
   const [importOpen, setImportOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("lineups");
   const [running, setRunning] = useState(false);
+  const runSeqRef = useRef(0);
   const [runError, setRunError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [lastMs, setLastMs] = useState<number | null>(null);
@@ -151,6 +95,9 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
   const { filter, setFilter, clearFilter, filteredPlayers, filterChips } =
     usePlayerFilters(players);
   const loadLive = useAppStore((s) => s.loadLive);
+  const loadFromApi = useAppStore((s) => s.loadFromApi);
+  const apiStatus = useAppStore((s) => s.apiStatus[sport] ?? "idle");
+  const apiError = useAppStore((s) => s.apiError[sport] ?? null);
   const liveStatus = useAppStore((s) => s.liveStatus[sport] ?? "idle");
   const liveGames = useAppStore((s) => s.liveGames[sport] ?? []);
   const liveWarnings = useAppStore((s) => s.liveWarnings[sport] ?? []);
@@ -173,11 +120,13 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
   // replaces an imported pool, because that is an explicit act.
   useEffect(() => {
     let cancelled = false;
-    // The bundled DraftKings slate IS the pool until the customer acts —
-    // an automatic ESPN pull would replace real prices with estimates.
-    if (useAppStore.getState().rosterSource[sport] !== "dk") {
-      void loadLive(sport);
-    }
+    void (async () => {
+      const loaded = await loadFromApi(sport);
+      if (cancelled) return;
+      if (!loaded && useAppStore.getState().rosterSource[sport] !== "dk") {
+        void loadLive(sport);
+      }
+    })();
     const timer = setInterval(() => {
       if (cancelled) return;
       const src = useAppStore.getState().rosterSource[sport];
@@ -188,7 +137,7 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [sport, loadLive]);
+  }, [sport, loadLive, loadFromApi]);
 
   // The exporter needs the pool, so each exported lineup can carry the
   // provenance of its projections.
@@ -207,45 +156,24 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
   const run = useCallback(
     (override?: Partial<OptimizerUiSettings>) => {
       if (players.length === 0) return;
+      const seq = ++runSeqRef.current;
       const s = override ? { ...settings, ...override } : settings;
       setRunning(true);
       setRunError(null);
-      void runOptimizerAsync(
-        {
-          sport,
-          strategy: s.strategy,
-          salaryCap: s.salary_cap,
-          numLineups: s.num_lineups,
-          maxExposure: s.max_exposure,
-          minProjection: s.min_projection,
-          simulationCount: s.simulation_count,
-          uniqueLineups: s.unique_lineups,
-          solver: s.solver,
-          contestType: s.contest_type,
-          teammateCorrelation: s.teammate_correlation,
-          opponentCorrelation: s.opponent_correlation,
-          cardCorrelation: s.card_correlation,
-          allowOpponents: s.allow_opponents,
-          enableBringBack: s.enable_bring_back,
-          stackRules: s.stack_rules.map((r) => ({
-            scope: r.scope,
-            id: r.id,
-            min: r.min,
-            max: r.max,
-          })),
-          seed: 42,
-        } satisfies OptimizerSettings,
-        players.map(toEngine),
-      )
-      .then((result) => {
-        setLastResult(result.lineups.map(toWire));
-        setWarnings(result.warnings ?? []);
-        setLastMs(result.elapsedMs);
-      })
-      .catch((err) => {
-        setRunError(err instanceof Error ? err.message : String(err));
-      })
-      .finally(() => setRunning(false));
+      void runOptimizerAsync(sport, s, players, "pulp")
+        .then((result) => {
+          if (runSeqRef.current !== seq) return;
+          setLastResult(result.lineups);
+          setWarnings(result.warnings ?? []);
+          setLastMs(result.elapsedMs);
+        })
+        .catch((err) => {
+          if (runSeqRef.current !== seq) return;
+          setRunError(err instanceof Error ? err.message : String(err));
+        })
+        .finally(() => {
+          if (runSeqRef.current === seq) setRunning(false);
+        });
     },
     [players, sport, settings, setLastResult],
   );
@@ -398,9 +326,17 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
     return { avgProjection, avgSalary, avgRst };
   }, [lineups, rotoContext]);
 
+  const slateLabel =
+    liveGames.length > 0
+      ? liveGames
+          .slice(0, 3)
+          .map((g) => g.label)
+          .join(" · ")
+      : `${players.length} players`;
+
   const statusLine =
     rosterSource === "dk"
-      ? `DraftKings slate loaded · JAX @ BAL · real salaries, DK's own projections — Refresh pulls ESPN live`
+      ? `DraftKings slate loaded · ${slateLabel} · real salaries & projections — Refresh pulls ESPN live`
       : rosterSource === "imported"
       ? `Imported roster · ${players.length} players — your file's salaries are in use; background refresh paused`
       : liveStatus === "live"
@@ -495,7 +431,7 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
               <>
                 <button
                   type="button"
-                  onClick={() => exportLineupsCsv(displayedLineups)}
+                  onClick={() => void exportLineupsCsv(displayedLineups)}
                   className="inline-flex items-center gap-1.5 px-3 h-9 text-sm font-medium rounded-2 text-ink-on-dark border border-white/25 bg-white/10 backdrop-blur-sm transition-colors hover:bg-white/18 hover:border-white/40"
                 >
                   <Download className="w-4 h-4" />
@@ -503,7 +439,7 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => exportLineupsXlsx(displayedLineups)}
+                  onClick={() => void exportLineupsXlsx(displayedLineups)}
                   className="inline-flex items-center gap-1.5 px-3 h-9 text-sm font-medium rounded-2 text-ink-on-dark border border-white/25 bg-white/10 backdrop-blur-sm transition-colors hover:bg-white/18 hover:border-white/40"
                 >
                   <Download className="w-4 h-4" />
@@ -552,6 +488,15 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
       )}
 
       <EstimateNotice mode={rosterSource === "dk" || rosterSource === "imported" ? "dk" : "estimate"} />
+
+      {apiStatus === "loading" && (
+        <p className="well p-3 label text-ink-muted">Connecting to optimizer backend…</p>
+      )}
+      {apiError && (
+        <p className="well p-3 label text-warn">
+          Backend API status: {apiError}
+        </p>
+      )}
 
       {runError && (
         <p className="well p-3 label text-danger">The build failed: {runError}</p>
@@ -776,11 +721,29 @@ function LineupsTab({
   keptKeys?: Set<string>;
   onToggleKeep?: (lineup: Lineup) => void;
 }) {
+  /**
+   * The portfolio is complete; the list on screen is not.
+   *
+   * Two thousand lineups drawn at once is 666,000 DOM nodes and 70,000
+   * image elements — the browser freezes for half a minute and then the
+   * tab dies. Every lineup is still built, scored, counted in the stats
+   * and written to the export. What this controls is how many cards are
+   * on the screen at one time.
+   */
+  const PAGE = 100;
+  const [visible, setVisible] = useState(PAGE);
+  useEffect(() => {
+    setVisible(PAGE);
+  }, [lineups]);
+
   if (lineups.length === 0) {
     return (
       <div className="well p-10 text-center" />
     );
   }
+
+  const shown = lineups.slice(0, visible);
+  const remaining = lineups.length - shown.length;
 
   return (
     <div className="space-y-4">
@@ -792,7 +755,7 @@ function LineupsTab({
         </p>
         {elapsedMs !== null && <span className="label-quiet num">{elapsedMs}ms</span>}
       </div>
-      {lineups.map((lineup, i) => (
+      {shown.map((lineup, i) => (
         <RotoLineupCard
           key={lineup.unique_key}
           lineup={lineup}
@@ -806,6 +769,20 @@ function LineupsTab({
           onLockLineup={onToggleKeep}
         />
       ))}
+      {remaining > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+          <span className="label-quiet num">
+            Showing {shown.length} of {lineups.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => setVisible((v) => v + PAGE)}
+            className="control h-9 px-4 text-sm hover:text-ink transition-colors"
+          >
+            Show {Math.min(PAGE, remaining)} more
+          </button>
+        </div>
+      )}
     </div>
   );
 }

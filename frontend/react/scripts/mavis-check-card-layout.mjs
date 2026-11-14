@@ -28,21 +28,44 @@ const height = Number(process.argv[5] ?? 900);
  * rather than hard-coding a path that only works on one laptop.
  */
 function findInstalledChromium() {
-  const root = join(homedir(), "AppData", "Local", "ms-playwright");
-  if (!existsSync(root)) return undefined;
+  const roots = [
+    process.env.PLAYWRIGHT_BROWSERS_PATH,
+    process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, "ms-playwright") : undefined,
+    join(homedir(), "AppData", "Local", "ms-playwright"),
+    join(homedir(), ".cache", "ms-playwright"),
+  ].filter(Boolean);
 
-  for (const dir of readdirSync(root)) {
-    if (!dir.toLowerCase().startsWith("chromium")) continue;
-    const base = join(root, dir);
-    for (const rel of [
-      join("chrome-headless-shell-win64", "chrome-headless-shell.exe"),
-      join("chrome-win64", "chrome.exe"),
-      join("chrome-win", "chrome.exe"),
-    ]) {
-      const exe = join(base, rel);
-      if (existsSync(exe)) return exe;
+  for (const root of roots) {
+    if (!existsSync(root)) continue;
+    for (const dir of readdirSync(root).sort().reverse()) {
+      const lower = dir.toLowerCase();
+      if (!lower.startsWith("chromium")) continue;
+      const base = join(root, dir);
+      for (const rel of [
+        join("chrome-headless-shell-win64", "chrome-headless-shell.exe"),
+        join("chrome-headless-shell-linux64", "chrome-headless-shell"),
+        join("chrome-win64", "chrome.exe"),
+        join("chrome-win", "chrome.exe"),
+        join("chrome-linux", "chrome"),
+      ]) {
+        const exe = join(base, rel);
+        if (existsSync(exe)) return exe;
+      }
     }
   }
+
+  for (const fallback of [
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+  ]) {
+    if (existsSync(fallback)) return fallback;
+  }
+
   return undefined;
 }
 

@@ -131,11 +131,26 @@ function unifyWranglerConfig() {
 }
 unifyWranglerConfig();
 
-const whoami = spawnSync(
+let wranglerEnv = { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT };
+let whoami = spawnSync(
   cmd,
   [...prefix, "whoami"].map(shellArg),
-  { encoding: "utf8", shell: NEEDS_SHELL },
+  { encoding: "utf8", shell: NEEDS_SHELL, env: wranglerEnv },
 );
+
+if (whoami.status !== 0 && process.env.CLOUDFLARE_API_TOKEN) {
+  const oauthEnv = { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT };
+  delete oauthEnv.CLOUDFLARE_API_TOKEN;
+  const fallback = spawnSync(
+    cmd,
+    [...prefix, "whoami"].map(shellArg),
+    { encoding: "utf8", shell: NEEDS_SHELL, env: oauthEnv },
+  );
+  if (fallback.status === 0) {
+    whoami = fallback;
+    wranglerEnv = oauthEnv;
+  }
+}
 
 if (whoami.status !== 0) {
   console.error(
@@ -197,7 +212,7 @@ const child = spawn(
   {
     stdio: "inherit",
     shell: NEEDS_SHELL,
-    env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT },
+    env: wranglerEnv,
   },
 );
 

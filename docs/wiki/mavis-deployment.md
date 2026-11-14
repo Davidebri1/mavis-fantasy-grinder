@@ -57,9 +57,9 @@ it unauthenticated in a non-interactive shell is what caused the incident record
 
 ## Verification tooling in the repo
 
-As of 2026-11-04, `frontend/react/scripts/` contains:
+As of 2026-11-14, `frontend/react/scripts/` contains:
 
-- `mavis-mavis-check-card-layout.mjs` — Playwright measurement of the home card row. See
+- `mavis-check-card-layout.mjs` — Playwright measurement of the home card row. See
   [mavis-home-screen-layout.md](mavis-home-screen-layout.md) for what it reports.
 - `mavis-deploy-cloudflare.mjs` — publishes `dist/` to Cloudflare Pages. `--dry-run` prints the file
   count and byte total without uploading.
@@ -72,10 +72,13 @@ the git history.
 
 1. `git status` — confirm the working tree is clean and you know which commit you are shipping.
 2. `cd frontend/react && npm run build`.
-3. Run `node scripts/mavis-mavis-check-card-layout.mjs` against the built app if the change touched the home
+3. Run `node scripts/mavis-check-card-layout.mjs` against the built app if the change touched the home
    screen.
 4. `node scripts/mavis-deploy-cloudflare.mjs`.
 5. `node scripts/mavis-verify-deploy.mjs` — it must print `MATCH` and exit 0.
-6. Note the commit hash and the deployment URL in the next dated wiki entry.
+6. Deploy the Django API container backend from `backend/django/` using `npx wrangler@4.157.0 deploy`
+   (`Dockerfile`, `wrangler.jsonc`, `worker/mavis-container-proxy.mjs`, requires Cloudflare Workers Paid
+   plan with Containers enabled and Docker daemon for building the image).
+7. Note the commit hash and the deployment URL in the next dated wiki entry.
 
 See also [mavis-locations.md](mavis-locations.md) for where the build output sits on disk.

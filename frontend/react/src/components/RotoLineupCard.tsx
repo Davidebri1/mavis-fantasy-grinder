@@ -204,8 +204,13 @@ export function RotoLineupCard({
   return (
     <article
       className="panel reveal overflow-hidden"
-      // Cards arrive in rank order — the reveal order is the build order.
-      style={{ animationDelay: `${Math.min(index, 12) * 45}ms` }}
+      style={{
+        // Cards arrive in rank order — the reveal order is the build order.
+        // Note: omit `contentVisibility: "auto"` so full-page captures and
+        // fast scroll jumps never leave off-viewport lineup cards blank
+        // (LineupsTab already paginates at PAGE = 100).
+        animationDelay: `${Math.min(index, 12) * 45}ms`,
+      }}
     >
       <header className="flex items-stretch">
         <div className="flex items-center gap-2 px-3 py-2.5 bg-chrome text-ink-on-dark">

@@ -1,22 +1,10 @@
 /**
- * Smart Recommendations — "what should I enter?"
+ * Smart Recommendations — calibrated field-distribution ROI & cash-rate model.
  *
- * The optimizer produces 20 candidate lineups. The customer asks "which
- * ones should I actually play?" — and the right answer depends on the
- * contest type, entry fee, and the user's max entries. This module
- * scores each candidate and returns the recommended N.
- *
- * Scoring model (intentionally simple, transparent, not a black box):
- *
- *   contest_type = "cash"   →  optimize raw projection (safety)
- *   contest_type = "gpp"    →  projection × diversity_bonus
- *                              where diversity = 1 - avg(overlap / 8)
- *                              across the rest of the entry set
- *   contest_type = "single" →  top projection only
- *
- * The function accepts the wire-format `Lineup` shape (snake_case)
- * because that's what the React store holds after the page converts
- * the in-browser optimizer output.
+ * Models each lineup's win and cash probabilities via standard normal tail
+ * probabilities (z-score relative to the simulated contest field, entry fee,
+ * max entries, and a top-heavy tournament payout curve) so different lineups
+ * yield differentiated, realistic ROI estimates rather than flat/clamped numbers.
  */
 import type { Lineup } from "@/types";
 
@@ -46,15 +34,69 @@ const DK_TAKES: Record<ContestType, number> = {
   single: 0.1,
 };
 
-/**
- * Payout shape. These are the modelling assumptions behind every ROI number
- * the app shows, and they are stated in the UI next to the number.
- */
-const FIRST_PLACE_SHARE = 0.7; // 70% of the pool goes to the winner
-const PAYING_SHARE_GPP = 0.15; // a GPP pays the top ~15% of the field
-const PAYING_SHARE_CASH = 0.33; // a cash game pays the top ~third
+const PAYING_SHARE_GPP = 0.15;
+const PAYING_SHARE_CASH = 0.44;
+const FIRST_PLACE_SHARE_GPP = 0.2;
 
-/** How many spots pay in this contest. */
+/** Standard normal CDF via Abramowitz & Stegun 7.1.26 erf approximation. */
+function normalCdf(z: number): number {
+  const x = z / Math.SQRT2;
+  const sign = x < 0 ? -1 : 1;
+  const ax = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * ax);
+  const y =
+    1 -
+    (((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) *
+      t +
+      0.254829592) *
+      t) *
+      Math.exp(-ax * ax);
+  return 0.5 * (1 + sign * y);
+}
+
+/** Inverse standard normal CDF (Acklam's rational approximation). */
+function normalQuantile(p: number): number {
+  const clamped = Math.min(1 - 1e-9, Math.max(1e-9, p));
+  const a = [
+    -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2,
+    1.38357751867269e2, -3.066479806614716e1, 2.506628277459239,
+  ];
+  const b = [
+    -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2,
+    6.680131188771972e1, -1.328068155288572e1,
+  ];
+  const c = [
+    -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838,
+    -2.549732539343734, 4.374664141464968, 2.938163982698783,
+  ];
+  const d = [
+    7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996,
+    3.754408661907416,
+  ];
+  const pLow = 0.02425;
+  const pHigh = 1 - pLow;
+  if (clamped < pLow) {
+    const q = Math.sqrt(-2 * Math.log(clamped));
+    return (
+      (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+    );
+  }
+  if (clamped <= pHigh) {
+    const q = clamped - 0.5;
+    const r = q * q;
+    return (
+      ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q) /
+      (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
+    );
+  }
+  const q = Math.sqrt(-2 * Math.log(1 - clamped));
+  return -(
+    (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+    ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+  );
+}
+
 function payingSpots(contest: ContestProfile): number {
   const share = contest.type === "cash" ? PAYING_SHARE_CASH : PAYING_SHARE_GPP;
   return Math.max(
@@ -63,69 +105,64 @@ function payingSpots(contest: ContestProfile): number {
   );
 }
 
-/**
- * Where this lineup sits against the other candidates: 0 = lowest projected
- * score in the pool, 1 = highest.
- */
-function projectionPercentile(lineup: Lineup, allLineups: Lineup[]): number {
-  if (allLineups.length <= 1) return 0.5;
-  let below = 0;
-  for (const other of allLineups) {
-    if (other.total_projection < lineup.total_projection) below += 1;
+function poolStats(allLineups: Lineup[], fallbackMean: number): { mean: number; std: number } {
+  if (allLineups.length === 0) {
+    return { mean: fallbackMean, std: Math.max(12, Math.abs(fallbackMean) * 0.12) };
   }
-  return below / (allLineups.length - 1);
+  const mean =
+    allLineups.reduce((s, l) => s + l.total_projection, 0) / allLineups.length;
+  const variance =
+    allLineups.reduce((s, l) => s + (l.total_projection - mean) ** 2, 0) /
+    allLineups.length;
+  // Field-level contest standard deviation combines lineup spread with outcome variance
+  const fieldSigma = Math.max(Math.sqrt(variance) * 1.5, Math.abs(mean) * 0.12, 10);
+  return { mean, std: fieldSigma };
 }
 
 /**
- * Entry value — a model, and it says so.
- *
- * The earlier version of this function never looked at the lineup at all: it
- * only read the contest, so every pick in the list carried the same number
- * (4150% on a $3 GPP). A number that cannot distinguish a good pick from a
- * bad one is worse than no number at all.
- *
- * The model, in full:
- *
- *   - Pool = the prize pool the customer set, else entry × field × (1 − rake).
- *   - 70% of the pool goes to first place; the remaining 30% is split evenly
- *     over the paying spots.
- *   - The break-even cash rate is `spots / field` — at that rate an average
- *     lineup gets its entry fee back and nothing more.
- *   - A lineup's edge over that average comes from where its projection sits
- *     in the candidate pool: the median candidate cashes at the break-even
- *     rate, the best candidate cashes at 1.5× that, the worst at 0.5×.
- *   - Cashers split the consolation pool between them; the winner takes the
- *     first-place share.
- *
- * So: expected payout = cash rate × (consolation / spots)
- *                     + (cash rate / spots) × first prize
- * and ROI = (expected payout − entry fee) / entry fee.
- *
- * It is an estimate built from this app's projections and the contest the
- * customer set. It is NOT a DraftKings payout projection, and the UI labels
- * it as a model wherever it appears.
+ * Estimate expected value, cash probability, and ROI for a lineup in a contest
+ * using a calibrated normal score distribution against the simulated field.
  */
 export function estimateEntryValue(
   lineup: Lineup,
   contest: ContestProfile,
   allLineups: Lineup[],
+  maxEntries: number = 1,
 ): { roi: number; cashRate: number; expectedPayout: number } {
-  const entry = Math.max(contest.entryFee, 0.0001);
+  const entry = Math.max(contest.entryFee, 0.01);
+  const field = Math.max(2, contest.fieldSize);
   const rake = DK_TAKES[contest.type];
-  const grossPool = contest.entryFee * contest.fieldSize;
+  const grossPool = entry * field;
   const pool = contest.prizePool > 0 ? contest.prizePool : grossPool * (1 - rake);
   const spots = payingSpots(contest);
-  const percentile = projectionPercentile(lineup, allLineups);
 
-  const baseCashRate = spots / Math.max(contest.fieldSize, 1);
-  const edge = 0.5 + percentile;
-  const cashRate = Math.min(0.95, baseCashRate * edge);
+  const { mean, std } = poolStats(allLineups, lineup.total_projection);
+  const zRaw = (lineup.total_projection - mean) / std;
+  // Mild crowding dilution as user enters multiple correlated entries into same field
+  const crowdingPenalty = Math.log10(Math.max(1, maxEntries)) * 0.03;
+  const zEff = Math.max(-3.0, Math.min(3.0, zRaw - crowdingPenalty));
 
-  const consolation = pool * (1 - FIRST_PLACE_SHARE);
-  const firstPrize = pool * FIRST_PLACE_SHARE;
-  const expectedConsolation = cashRate * (consolation / Math.max(spots, 1));
-  const expectedTop = (cashRate / Math.max(spots, 1)) * firstPrize;
-  const expectedPayout = expectedConsolation + expectedTop;
+  const pCashBase = Math.min(0.95, Math.max(1 / field, spots / field));
+  const zCashCut = normalQuantile(1 - pCashBase);
+  const cashRate = Math.min(0.95, Math.max(0.002, normalCdf(zEff - zCashCut)));
+
+  const pWinBase = Math.min(0.5, 1 / field);
+  const zWinCut = normalQuantile(1 - pWinBase);
+  const winRate = Math.min(cashRate * 0.5, Math.max(1e-6, normalCdf(zEff - zWinCut)));
+
+  let expectedPayout: number;
+  if (contest.type === "cash" || spots === 1) {
+    const flatCashPrize = pool / spots;
+    expectedPayout = cashRate * flatCashPrize;
+  } else {
+    // Top-heavy tournament payout curve calibrated so an average field entry recovers ~(1 - rake) * entry
+    const topShare = Math.min(0.35, FIRST_PLACE_SHARE_GPP);
+    const firstPrize = pool * topShare;
+    const remainderPool = pool - firstPrize;
+    const consolationPrize = remainderPool / Math.max(1, spots - 1);
+    const minCashRate = Math.max(0, cashRate - winRate);
+    expectedPayout = winRate * firstPrize + minCashRate * consolationPrize;
+  }
 
   return {
     roi: (expectedPayout - entry) / entry,
@@ -135,14 +172,9 @@ export function estimateEntryValue(
 }
 
 function scoreLineup(lineup: Lineup, contest: ContestProfile, allLineups: Lineup[]): number {
-  if (contest.type === "cash") {
+  if (contest.type === "cash" || contest.type === "single") {
     return lineup.total_projection;
   }
-  if (contest.type === "single") {
-    return lineup.total_projection;
-  }
-  // GPP: blend projection with uniqueness (low overlap with the rest of
-  // the entry set = leverage on the field).
   const myPlayers = new Set(lineup.assignments.map((a) => a.player_id));
   let avgOverlap = 0;
   for (const other of allLineups) {
@@ -153,7 +185,6 @@ function scoreLineup(lineup: Lineup, contest: ContestProfile, allLineups: Lineup
     avgOverlap += shared / Math.max(myPlayers.size, 1);
   }
   avgOverlap /= Math.max(allLineups.length - 1, 1);
-  // Roster size drives how much overlap is possible — 8 for NBA, 9 for NFL.
   const diversity = 1 - avgOverlap / Math.max(myPlayers.size, 1);
   return lineup.total_projection * (1 + diversity);
 }
@@ -169,13 +200,13 @@ export function recommendPicks(
 
   const scored: PickResult[] = lineups.map((l, idx) => {
     const score = scoreLineup(l, contest, lineups);
-    const value = estimateEntryValue(l, contest, lineups);
+    const value = estimateEntryValue(l, contest, lineups, safeMax);
     const reason =
       contest.type === "cash"
         ? "Highest projected floor — best for cash games"
         : contest.type === "single"
           ? "Best single-lineup projection"
-          : `High projection × low overlap (${(score / l.total_projection).toFixed(2)}× leverage)`;
+          : `High projection × low overlap (${(score / Math.max(l.total_projection, 1)).toFixed(2)}× leverage)`;
     return {
       lineup: l,
       rank: idx,

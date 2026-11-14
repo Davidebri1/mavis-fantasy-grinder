@@ -31,7 +31,7 @@ from typing import Sequence
 
 import pulp
 
-from ..engines.milp_pulp import SolverSpec, solve_pulp
+from ..engines.milp_pulp import SolverSpec, StackRulesConstraint, build_stack_rule_bounds, solve_pulp
 from ..schema import (
     ContestType,
     OptimizerSettings,
@@ -49,8 +49,9 @@ def solve_classic_with_slots(
     locked_idx: set[int] | None = None,
     excluded_idx: set[int] | None = None,
     forbidden_lineups: list[set[int]] | None = None,
+    stack_rules: Sequence[dict] | None = None,
     time_limit_ms: int = 5_000,
-) -> tuple[list[int], float, int, str]:
+) -> tuple[list[int], float, int, str, int]:
     """Solve the NBA Classic 8-pick lineup ILP with slot constraints.
 
     Returns (selected_idx, value, salary, status).
@@ -111,6 +112,11 @@ def solve_classic_with_slots(
                 f"forbid_{'_'.join(map(str, sorted(idx_set)))}",
             )
 
+    # User stack rules
+    rule_bounds = build_stack_rule_bounds(players, stack_rules)
+    if rule_bounds:
+        StackRulesConstraint(bounds=rule_bounds).add(problem, x)
+
     solver = pulp.PULP_CBC_CMD(timeLimit=time_limit_ms / 1000.0, gapRel=0.005, msg=0)
     import time as _time
 
@@ -151,7 +157,7 @@ def lineup_from_slot_solution(
             )
         )
     total_salary = sum(players[i].salary for i in slot_assignments)
-    total_proj = sum(scores[i] for i in slot_assignments)
+    total_proj = sum(players[i].effective_projection for i in slot_assignments)
     total_ceiling = sum(players[i].ceiling for i in slot_assignments)
     teams = {players[i].team for i in slot_assignments if players[i].team}
 
