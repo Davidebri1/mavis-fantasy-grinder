@@ -11,14 +11,21 @@
  *   mavis-eval-scatter.svg - projection vs actual, identity line, the
  *     model 90% interval as a vertical segment per sampled evaluation
  *   mavis-eval-agreement.svg - model vs baseline categorization
- *     agreement on booms, busts, overall, with the 50% line
+ *     agreement on booms, busts, overall, each bar against its OWN
+ *     no-skill reference (not a flat 50% line)
  *   mavis-eval-timeline.svg - the regime player career timeline with
  *     breakpoints marked
+ *   mavis-eval-gap.svg - agreement measured in percentage points ABOVE
+ *     each side's own no-skill reference, model vs baseline
  *
  * Colour rule: neutrals for structure, colour only where it means
- * something - the cut line, level shifts and the 50% reference are red
- * (statistical convention for the outlier boundary); everything else is
- * gray. Built by mavis for Dave.
+ * something - the cut line, level shifts and the no-skill reference
+ * marks are red (statistical convention for the outlier boundary);
+ * everything else is gray. Built by mavis for Dave.
+ *
+ * The significance numbers (no-skill reference, z against it, permutation
+ * p) come from .tmp-audit/projection-significance.json, written by
+ * scripts/mavis-evaluation-significance.mjs. Run that script first.
  *
  * USAGE: node scripts/mavis-evaluation-charts.mjs
  */
@@ -29,6 +36,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const IN_JSON = join(HERE, "..", ".tmp-audit", "projection-evaluation.json");
+const IN_SIG = join(HERE, "..", ".tmp-audit", "projection-significance.json");
 const OUT_DIR = join(HERE, "..", "..", "..", "docs", "shots");
 
 const GRAY_LOW = "#c3cad3";   // low half bins
@@ -42,6 +50,7 @@ const FONT = "Segoe UI, Arial, sans-serif";
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const f1 = (x) => (Number.isFinite(x) ? (Math.round(x * 10) / 10).toFixed(1) : "?");
+const f2 = (x) => (Number.isFinite(x) ? x.toFixed(2) : "?");
 
 function svg(W, H, body) {
   return '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H +
@@ -176,24 +185,32 @@ function scatterSvg(sc) {
 }
 
 // ---------------------------------------------------------------------------
-// (c) model vs baseline categorization agreement, 50% line
+// (c) model vs baseline categorization agreement, each bar against its OWN
+//     no-skill reference
+//
+// A flat 50% line is not the reference for this question and is not drawn.
+// The reference for a predictor is the agreement it would score while
+// carrying no information about the outcome: on booms, P(predict high);
+// on busts, P(predict low); overall, boomFrac*P(high) + (1-boomFrac)*P(low).
+// It differs per bar because the model and the baseline lean high by
+// different amounts (72.1% vs 79.0%).
 // ---------------------------------------------------------------------------
 
-function agreementSvg(ag) {
-  const W = 900, H = 560, M = { t: 92, r: 30, b: 110, l: 74 };
+function agreementSvg(ag, sig) {
+  const W = 900, H = 610, M = { t: 104, r: 30, b: 160, l: 74 };
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
   const groups = [
-    { name: "boom games", model: ag.model.boom, baseline: ag.baseline.boom },
-    { name: "bust games", model: ag.model.bust, baseline: ag.baseline.bust },
-    { name: "all evaluations", model: ag.model.overall, baseline: ag.baseline.overall },
+    { name: "boom games", key: "boom" },
+    { name: "bust games", key: "bust" },
+    { name: "all evaluations", key: "overall" },
   ];
   const y = (v) => M.t + ph - (v / 100) * ph;
   const groupW = pw / groups.length;
   const barW = groupW * 0.22;
   let b = "";
   for (let v = 0; v <= 100; v += 10) {
-    b += seg(M.l, y(v), M.l + pw, y(v), v === 50 ? RED : GRID, v === 50 ? 1.6 : 1, v === 50 ? "7 5" : "");
-    b += txt(M.l - 8, y(v) + 4, v + "%", 11, v === 50 ? RED : MUTED, "end", v === 50 ? 600 : undefined);
+    b += seg(M.l, y(v), M.l + pw, y(v), GRID, 1);
+    b += txt(M.l - 8, y(v) + 4, v + "%", 11, MUTED, "end");
   }
   b += seg(M.l, M.t + ph, M.l + pw, M.t + ph, INK, 1);
   b += seg(M.l, M.t, M.l, M.t + ph, INK, 1);
@@ -201,22 +218,81 @@ function agreementSvg(ag) {
     const gx = M.l + gi * groupW;
     const cx = gx + groupW / 2;
     const bars = [
-      { v: g.model.rate, n: g.model.evaluations, z: g.model.z, fill: "#39424e", label: "model" },
-      { v: g.baseline.rate, n: g.baseline.evaluations, z: g.baseline.z, fill: GRAY_BASE, label: "baseline" },
+      { side: "model", fill: "#39424e" },
+      { side: "baseline", fill: GRAY_BASE },
     ];
     bars.forEach((bar, bi) => {
+      const s = sig[bar.side];
+      const a = s.agreement[g.key];
+      const ratePct = a.rate * 100;              // stored as a fraction
+      const ref = s.noSkillReference[g.key] * 100;
+      const z = s.vsNoSkill[g.key].z;
       const bx = cx + (bi === 0 ? -barW - 8 : 8);
-      b += box(bx, y(bar.v), barW, M.t + ph - y(bar.v), bar.fill);
-      b += txt(bx + barW / 2, y(bar.v) - 8, f1(bar.v) + "%", 12.5, INK, "middle", 700);
-      b += txt(bx + barW / 2, y(bar.v) - 24, "z=" + bar.z, 11, MUTED, "middle");
-      b += txt(bx + barW / 2, M.t + ph + 34, bar.label, 12, INK, "middle", 600);
-      b += txt(bx + barW / 2, M.t + ph + 50, "n=" + bar.n, 11, MUTED, "middle");
+      b += box(bx, y(ratePct), barW, M.t + ph - y(ratePct), bar.fill);
+      b += txt(bx + barW / 2, y(ratePct) - 8, f1(ratePct) + "%", 12.5, INK, "middle", 700);
+      b += txt(bx + barW / 2, y(ratePct) - 24, "z=" + f2(z), 11, MUTED, "middle");
+      // the no-skill reference for this bar, drawn on the bar
+      b += seg(bx - 3, y(ref), bx + barW + 3, y(ref), RED, 1.8);
+      b += txt(bx + barW / 2, M.t + ph + 34, bar.side, 12, INK, "middle", 600);
+      b += txt(bx + barW / 2, M.t + ph + 50, "n=" + a.n, 11, MUTED, "middle");
+      b += txt(bx + barW / 2, M.t + ph + 64, "no-skill", 10.5, RED, "middle", 600);
+      b += txt(bx + barW / 2, M.t + ph + 78, f1(ref) + "%", 11, RED, "middle", 700);
     });
-    b += txt(cx, M.t + ph + 80, g.name, 13, INK, "middle", 700);
+    b += txt(cx, M.t + ph + 104, g.name, 13, INK, "middle", 700);
   });
   b += txt(M.l, 24, "Categorization agreement: does the categorization match the actual category?", 15, INK, "start", 700);
-  b += txt(M.l, 46, "Agree (same) = high on a boom, low on a bust, cut C per game. One-sample z-test against 50% on each bar. Red line = 50%.", 11.5, MUTED);
-  b += txt(M.l, 64, "Booms and busts are separate populations here, never complements - each bar carries its own n.", 11.5, MUTED);
+  b += txt(M.l, 46, "Agree (same) = high on a boom, low on a bust, cut C per game. Each bar carries its own no-skill reference (red tick) and the z-test against it.", 11.5, MUTED);
+  b += txt(M.l, 64, "The no-skill reference is what a predictor with no information about the outcome would score on that population - it is not 50% here.", 11.5, MUTED);
+  b += txt(M.l, 82, "Booms and busts are separate populations here, never complements - each bar carries its own n.", 11.5, MUTED);
+  return svg(W, H, b);
+}
+
+// ---------------------------------------------------------------------------
+// (f) agreement measured in points ABOVE each side's own no-skill reference
+//     - the skill comparison, with the lean removed
+// ---------------------------------------------------------------------------
+
+function gapSvg(sig) {
+  const W = 900, H = 520, M = { t: 104, r: 30, b: 130, l: 74 };
+  const pw = W - M.l - M.r, ph = H - M.t - M.b;
+  const groups = [
+    { name: "boom games", key: "boom" },
+    { name: "bust games", key: "bust" },
+    { name: "all evaluations", key: "overall" },
+  ];
+  const maxV = 5;
+  const y = (v) => M.t + ph - (v / maxV) * ph;
+  const groupW = pw / groups.length;
+  const barW = groupW * 0.22;
+  let b = "";
+  for (let v = 0; v <= maxV; v += 1) {
+    b += seg(M.l, y(v), M.l + pw, y(v), v === 0 ? INK : GRID, v === 0 ? 1.4 : 1);
+    b += txt(M.l - 8, y(v) + 4, v + (v === maxV ? " pts" : ""), 11, MUTED, "end");
+  }
+  b += seg(M.l, M.t, M.l, M.t + ph, INK, 1);
+  groups.forEach((g, gi) => {
+    const gx = M.l + gi * groupW;
+    const cx = gx + groupW / 2;
+    const bars = [
+      { side: "model", fill: "#39424e" },
+      { side: "baseline", fill: GRAY_BASE },
+    ];
+    bars.forEach((bar, bi) => {
+      const s = sig[bar.side];
+      const gap = s.gapPoints[g.key];
+      const z = s.vsNoSkill[g.key].z;
+      const bx = cx + (bi === 0 ? -barW - 8 : 8);
+      b += box(bx, y(gap), barW, M.t + ph - y(gap), bar.fill);
+      b += txt(bx + barW / 2, y(gap) - 8, "+" + f2(gap), 12.5, INK, "middle", 700);
+      b += txt(bx + barW / 2, y(gap) - 24, "z=" + f2(z), 11, MUTED, "middle");
+      b += txt(bx + barW / 2, M.t + ph + 30, bar.side, 12, INK, "middle", 600);
+    });
+    b += txt(cx, M.t + ph + 60, g.name, 13, INK, "middle", 700);
+  });
+  b += txt(M.l, 24, "Agreement above each side's own no-skill reference (percentage points)", 15, INK, "start", 700);
+  b += txt(M.l, 46, "The lean is removed: each side is scored against the agreement it would reach with no information about the outcome.", 11.5, MUTED);
+  b += txt(M.l, 64, "On booms and busts the two sides land on the same z; on all evaluations the model is ahead by under half a point.", 11.5, MUTED);
+  b += txt(M.l, 82, "Data: " + sig.evaluations + " evaluations, " + sig.shuffles + " permutation shuffles, seed " + sig.seed + ".", 11.5, MUTED);
   return svg(W, H, b);
 }
 
@@ -279,6 +355,7 @@ function timelineSvg(p) {
 // ---------------------------------------------------------------------------
 
 const data = JSON.parse(readFileSync(IN_JSON, "utf8"));
+const sig = JSON.parse(readFileSync(IN_SIG, "utf8"));
 mkdirSync(OUT_DIR, { recursive: true });
 const written = [];
 const put = (name, text) => {
@@ -292,7 +369,8 @@ for (const p of data.charts.histogramPlayers) {
   put("mavis-eval-histogram-" + p.label + ".svg", histogramSvg(p));
 }
 put("mavis-eval-scatter.svg", scatterSvg(data.charts.scatter));
-put("mavis-eval-agreement.svg", agreementSvg(data.agreement));
+put("mavis-eval-agreement.svg", agreementSvg(data.agreement, sig));
+put("mavis-eval-gap.svg", gapSvg(sig));
 if (data.charts.timeline) {
   const tl = data.charts.timeline;
   tl.reason = (data.charts.histogramPlayers.find((q) => q.label === "regime") || {}).reason

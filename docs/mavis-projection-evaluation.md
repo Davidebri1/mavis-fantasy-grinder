@@ -4,18 +4,26 @@ Built by mavis. Walk-forward evaluation of Dave's projection model — the engin
 
 This document supersedes `docs/mavis-accuracy-history.md` (deleted) and was rebuilt to the owner's spec: standard test names only; **no data omitted**; boom/bust defined once; multiple justified factors; visuals required; every count says exactly what it counts.
 
+**Revised 2026-11-14 (mavis).** The reference line was wrong in the first version of this document: every rate carried a one-sample z-test against a flat 50%, and the document called that "the spec's fixed reference". The owner's spec sets no such line — the 50% in `docs/DFS Projection Model.md` is the even-split floor (P = 0.5), a different quantity. The rates are now tested against each predictor's own **no-skill reference** (defined once, below), and the corrected comparison is in [the headline numbers](#the-headline-numbers) and [the verdict](#verdict-without-spin). Nothing else in the evaluation changed: same 24,981 games of record, same 22,460 evaluations, same cut C, same engine.
+
 ## The headline numbers
 
-Agreement means the categorization matched the actual category — [high on a boom](#boom-game-and-bust-game), [low on a bust](#boom-game-and-bust-game), against the same [cut C](#cut-c) on both sides ([agreement](#agreement), defined once). Every rate carries its one-sample z-test against 50%.
+Agreement means the categorization matched the actual category — [high on a boom](#boom-game-and-bust-game), [low on a bust](#boom-game-and-bust-game), against the same [cut C](#cut-c) on both sides ([agreement](#agreement), defined once). Every rate is tested against its own [no-skill reference](#no-skill-reference) — not against a flat 50%, for the reason given in [the 50% line](#the-50-line-and-why-it-was-the-wrong-reference).
 
-| scope | model | baseline (plain prior-games average) |
-|---|---|---|
-| [Boom games](#boom-game-and-bust-game) (actual > C), categorized [high](#model-categorization) | **75.8%** (n=11,674, z=55.77) | 82.4% (n=11,674, z=70.03) |
-| Bust games (actual ≤ C), categorized low | **31.9%** (n=10,786, z=-37.59) | 24.6% (n=10,786, z=-52.78) |
-| [Overall](#agreement), all 22,460 [evaluations](#earlier-games-and-earlier_n) | **54.7%** (n=22,460, z=14.16) | 54.6% (n=22,460, z=13.91) |
-| [Contained](#containment) in the model's 90% interval (supporting) | 71.0% (n=17,498) | n/a (the baseline carries no interval) |
+| scope | model | model reference | model z | baseline (plain prior-games average) | baseline reference | baseline z |
+|---|---|---|---|---|---|---|
+| [Boom games](#boom-game-and-bust-game) (actual > C), categorized [high](#model-categorization) — n=11,674 | **75.8%** | 72.1% | 8.92 | 82.4% | 79.0% | 8.92 |
+| Bust games (actual ≤ C), categorized low — n=10,786 | **31.9%** | 27.9% | 9.28 | 24.6% | 21.0% | 9.28 |
+| [Overall](#agreement), all 22,460 [evaluations](#earlier-games-and-earlier_n) | **54.7%** | 50.9% | 11.54 | 54.6% | 51.1% | 10.47 |
+| [Contained](#containment) in the model's 90% interval (supporting) | 71.0% (n=17,498) | n/a | n/a | n/a (the baseline carries no interval) | n/a | n/a |
 
-**How to read this.** 50% is the spec's fixed reference and the z-tests are against it. It is not the whole story, because both sides categorize most games high ([model](#model-categorization): 16,195 of 22,460 = 72.1%; [baseline](#baseline): 17,754 of 22,460 = 79.0%) and 52.0% of the evaluations are booms (11,674 of 22,460). Under a no-skill null — categorization independent of outcome — those two rates alone would produce overall agreement of 50.9% for the model and 51.2% for the baseline. The observed 54.7% and 54.6% sit **+3.8 and +3.4 points above their own no-skill expectation**; that gap, not the z against 50%, is the honest size of each side's edge. Against each other: the baseline wins boom agreement (it leans high harder), the model wins bust agreement (it leans high less), overall is a tie to one decimal. Booms and busts are separate populations here, each with its own n — never complements.
+Each z is a one-sample z-test against that row's reference. Each permutation p is from 10,000 shuffles of the predictions against the real outcomes (seed 20261114): p = 0.0001 for every rate on both sides — both sides beat their own no-skill reference, and the gap above it is +3.70 / +4.01 / +3.85 points for the model and +3.36 / +3.63 / +3.49 for the baseline.
+
+**How to read this.** The reference is the agreement a predictor would score while knowing nothing about the outcome — not a coin flip. Two facts make 50% the wrong line here: 52.0% of the evaluations are booms, and both sides categorize most games high ([model](#model-categorization): 16,195 of 22,460 = 72.1%; [baseline](#baseline): 17,754 of 22,460 = 79.0%). A predictor with no information at all therefore already agrees more than half the time, and measuring against 50% flatters it — it flatters the harder-leaning baseline more, which is how the first version of this document ended up calling the baseline the winner on booms.
+
+Measured against each side's own reference, the two are a dead heat. On booms the model is +3.70 points and the baseline +3.36, both at z = 8.92; on busts the model is +4.01 and the baseline +3.63, both at z = 9.28; over all evaluations the model is +3.85 (z = 11.54) and the baseline +3.49 (z = 10.47). On the same 22,460 games the model agrees where the baseline does not on 1,602 games and the baseline agrees where the model does not on 1,583: McNemar's test χ²(1) = 0.11, p = 0.74. Booms and busts are separate populations here, each with its own n — never complements.
+
+**What this says about the model.** The factor machinery does not beat the plain prior-games average on this data. It moves *which* games each side agrees on (the model leans high less, so it catches more busts and fewer booms) without moving the total. Association with the outcome is the same for both sides: φ = 0.086 for the model and 0.086 for the baseline, χ²(1) = 165.8 and 165.5. Both carry a small, real, statistically significant signal — roughly +3.5 to +4 points of agreement above what an uninformed predictor scores — and neither is better than the other.
 
 ## What was evaluated (the counts)
 
@@ -55,7 +63,24 @@ The model categorizes a game **high iff its projection > C, low otherwise**. Sam
 The plain prior-games average: the arithmetic mean of all earlier games — no split, no factor, no weighting, no outlier removal. It is categorized against the **same C by the same rule**: high iff its average > C. Because an average of a boom/bust distribution sits above its median, the baseline categorizes high on 79.0% of evaluations; that is a property of the naive estimator, reported as it comes out.
 
 ### agreement
-A categorization **agrees (same)** when it matches the actual category — high on a boom, low on a bust; otherwise **different**. Agreement rates are reported for the model and the baseline on booms, on busts, and overall, each with its one-sample z-test against 50% (z = (rate − 0.5) / sqrt(0.25/n)).
+A categorization **agrees (same)** when it matches the actual category — high on a boom, low on a bust; otherwise **different**. Agreement rates are reported for the model and the baseline on booms, on busts, and overall, each with its one-sample z-test against that side's own [no-skill reference](#no-skill-reference) (z = (rate − ref) / sqrt(ref(1−ref)/n)), plus a permutation p-value from 10,000 shuffles of the predictions against the real outcomes.
+
+### no-skill reference
+The agreement a predictor scores while carrying **no information about the outcome**. It is the honest comparison line, because a predictor that leans high will agree more than half the time on this data without knowing anything. For a predictor whose share of "high" calls is p, and where booms are a share b of the evaluations:
+
+- on **booms**: reference = p (a no-information predictor says "high" on a boom exactly as often as it says "high" overall)
+- on **busts**: reference = 1 − p
+- **overall**: reference = b·p + (1−b)·(1−p)
+
+Applied here: the model says high on 72.1% of evaluations and the baseline on 79.0%; booms are 52.0% of evaluations. So the model's references are 72.1% / 27.9% / 50.9% and the baseline's are 79.0% / 21.0% / 51.1%. The gap between the observed rate and this reference — in percentage points — is the size of each side's edge, and that is what the z-tests and the permutation tests measure. Script: `frontend/react/scripts/mavis-evaluation-significance.mjs`; output: `frontend/react/.tmp-audit/projection-significance.json`.
+
+### the 50% line, and why it was the wrong reference
+50% means "a coin flip": the rate you would expect if the categorization were no better than chance. It is the right reference only when the actual outcome is a 50/50 split **and** the predictor is a 50/50 coin flip. Neither holds here. Booms are 52.0% of evaluations because the cut C is the median split of the player's own earlier games, so by construction slightly more games land above it; and both predictors lean high (72.1% and 79.0%). A no-information predictor therefore already agrees ~51% of the time, and measuring against 50% overstates every edge — by the widest margin for the predictor that leans high hardest.
+
+Two further points, because the first version of this document got both wrong:
+
+- **The owner's spec sets no 50% agreement line.** The 50% in `docs/DFS Projection Model.md` is the even-split floor — "half high half low = total projection", P = 0.5 when no factor clears the evidence floor. That is a floor on a *projection*, not a reference for a *agreement rate*. The first version of this document called 50% "the spec's fixed reference"; that was wrong.
+- **The raw agreement gaps were read as skill when they were mostly lean.** The baseline's 82.4% boom agreement looked like a win over the model's 75.8%; against their own references the two are +3.36 and +3.70 points, i.e. the model is marginally ahead, and both sit at the same z = 8.92.
 
 ### P
 P is the weight of the high half in the projection: **the empirical frequency of the winning factor's high-side condition for that player** — the share of the engine's post-peel earlier games where the condition holds (games with an unknown factor value are excluded from both numerator and denominator). The projection is his document's formula: high mean × P + low mean × (1 − P).
@@ -80,7 +105,7 @@ For evaluations with an interval (earlier_n ≥ 4): **same** when the actual DK 
 2. **Per-game factors** (all objective, all known before kickoff): `isHome` (boolean), `month` (categorical), `opponent` (categorical — the other team in the game), `restDays` (numeric — days since that player's previous game of record), `regimeShifts` (numeric — the number of [level-shift breakpoints](#breakpoints-leads-not-firings) recorded for the player strictly before that game).
 3. **Walk forward** through each player's games. At each evaluation the model sees ONLY the earlier games: the engine splits them at the median, peels at most two multimodal outliers per half (skew/kurtosis test), computes the half means, ranks every candidate factor by its two-sample t-test (Welch, with/without the condition), and applies the sameness test between the halves.
 4. **The winning factor** is the strongest by |t|; its high-side condition is the state whose games average higher. P = the condition's empirical frequency in the player's earlier games; projection = high mean × P + low mean × (1 − P). On the raw-average and even-split paths the projection follows his document's definitional rules instead (see [model paths](#model-paths)).
-5. **Categorize and score:** model projection vs C, baseline average vs C, actual vs C — one cut, one rule. Agreement per side on booms, busts, overall; one-sample z vs 50% on each of the six rates.
+5. **Categorize and score:** model projection vs C, baseline average vs C, actual vs C — one cut, one rule. Agreement per side on booms, busts, overall; each rate tested against that side's own [no-skill reference](#no-skill-reference) by a one-sample z-test and by a permutation test (10,000 shuffles, seed 20261114). `scripts/mavis-evaluation-significance.mjs` reads the harness CSV and produces every number in the headline table.
 6. The engine runs as its bare-Node mirror `scripts/dave-port.mjs`, parity-tested against the TypeScript engine by `scripts/dave-port.test.mjs` (identical projections, intervals, factors, breakpoints).
 
 ## The charts
@@ -117,11 +142,17 @@ Five players, each selection rule recorded (the pool is players with ≥ 30 eval
 
 *1,459 sampled evaluations (a deterministic 1-in-12 of the 17,498 with an interval; the method is stated on the chart). The dashed gray vertical segments are the model's 90% intervals, the dots are the projections, the solid diagonal is the identity line. The mass above the identity line at low actuals and below it at high actuals is the regression-to-the-mean any prior-games model shows; the interval segments are wide enough to cover most of it (71.0% same).*
 
-### (c) Categorization agreement, model vs baseline, with the 50% line
+### (c) Categorization agreement, model vs baseline, each bar against its own no-skill reference
 
 ![Agreement chart](shots/mavis-eval-agreement.svg)
 
-*The six rates from the headline table, each bar carrying its own n and z. The red dashed line is 50%.*
+*The six rates from the headline table, each bar carrying its own n, its own red no-skill reference tick, and the z-test against that reference. There is no 50% line on this chart: 50% is not the reference, for the reason given in [the 50% line](#the-50-line-and-why-it-was-the-wrong-reference).*
+
+### (f) The same comparison with the lean removed: agreement above each side's own no-skill reference
+
+![Gap chart](shots/mavis-eval-gap.svg)
+
+*Each bar is the observed agreement minus that side's own no-skill reference, in percentage points, with the z-test against the reference above it. On booms the two sides land on the same z (8.92); on busts on the same z (9.28); over all evaluations the model is ahead by 0.36 points (z = 11.54 against 10.47). The 2×2 association is the same size for both sides: φ = 0.086 each (χ²(1) = 165.8 and 165.5). On the same 22,460 games the model alone agrees on 1,602 and the baseline alone on 1,583 — McNemar's test χ²(1) = 0.11, p = 0.74.*
 
 ### (d) One regime-shift player's timeline, breakpoints marked
 
@@ -222,21 +253,26 @@ Each would enter as one more candidate factor key the day a feed exists. None is
 - **Two-point conversions** are absent from ESPN's receiving box group (carried over from the old run), worth a fraction of a point per game.
 - **Positions** are inferred from the box score, then refined by exact ESPN athlete lookups for all 1,961 evaluated players (0 failures); the small refined counts (P, PK, CB, OT, S, LB) are reported as-is.
 - **No contest-level metrics.** DraftKings contest results are not public; winning-contests-predicted and ROI stay pending a feed, as in the old document. Not faked.
-- **The z-tests are against the spec's fixed 50%**, which on this constructed split is not a skill line by itself — the no-skill expectations in [how to read this](#the-headline-numbers) are the honest comparison.
+- **The reference is the no-skill reference, not 50%.** On this constructed split a coin-flip reference would overstate both sides' edges, and it would overstate the baseline's more, because the baseline leans high harder. Every rate in this document is tested against the [no-skill reference](#no-skill-reference) and confirmed by a permutation test.
+- **The model does not beat the plain prior-games average.** Measured correctly, the two are a dead heat: same z on booms, same z on busts, same φ, McNemar p = 0.74. The factor machinery moves *which* games each side agrees on, not how many.
 
 ## Verdict, without spin
 
-On 22,460 evaluations over 1,961 players: the **baseline wins boom agreement** (82.4% vs 75.8%), the **model wins bust agreement** (31.9% vs 24.6%), and **overall is a tie** (54.7% vs 54.6%). Both sides clear their own no-skill expectation by a similar margin (+3.8 model, +3.4 baseline) — the factor machinery, on this data, moves the shape of the agreement (boom edge traded for bust edge) more than its size. The model's edge is real but small, and the honest summary is: one cut, one rule, standard tests, every game recorded — the model buys bust sensitivity at the cost of boom agreement, and does not yet beat the plain average overall.
+On 22,460 evaluations over 1,961 players: the **model and the plain prior-games average are statistically indistinguishable**. Against each side's own no-skill reference the model is +3.70 points on booms (z = 8.92) and the baseline +3.36 (z = 8.92); +4.01 vs +3.63 on busts (both z = 9.28); +3.85 vs +3.49 over all evaluations (z = 11.54 vs 10.47). Both sides carry a small, real, statistically significant signal — roughly +3.5 to +4 points of agreement above what an uninformed predictor scores on the same data — and the association with the outcome is the same size for both (φ = 0.086 each). On the same games the model agrees where the baseline does not on 1,602 and the baseline agrees where the model does not on 1,583: McNemar's test χ²(1) = 0.11, p = 0.74.
+
+The honest summary: one cut, one rule, standard test names, every game recorded. The factor machinery moves the *shape* of the agreement — the model leans high less, so it catches more busts and fewer booms — without moving the total. It does not beat the plain average on this data, and the first version of this document said otherwise because it measured both sides against a coin flip instead of against their own no-skill reference.
 
 ## Files, and how to rebuild
 
 - Harness: `frontend/react/scripts/mavis-projection-evaluation.mjs` (replaces `scripts/mavis-accuracy-history.mjs`, deleted; the ESPN fetch layer was carried over verbatim).
-- Chart script: `frontend/react/scripts/mavis-evaluation-charts.mjs`.
+- Significance script: `frontend/react/scripts/mavis-evaluation-significance.mjs` — the no-skill references, the z-tests against them, the permutation tests, the 2×2 chi-square and the model-vs-baseline paired test. Reads the harness CSV, writes `.tmp-audit/projection-significance.json`.
+- Chart script: `frontend/react/scripts/mavis-evaluation-charts.mjs` (reads both JSONs).
 - Engine: `frontend/react/src/lib/dave-projection.ts`; bare-Node mirror `frontend/react/scripts/dave-port.mjs`; parity + hand-computed cases in `scripts/dave-port.test.mjs` and `src/lib/dave-projection.test.ts`.
 - Per-game CSV (git-ignored): `frontend/react/.tmp-audit/projection-evaluation.csv` — 24,981 rows.
 - Summary JSON: `frontend/react/.tmp-audit/projection-evaluation.json` — headline rates, per-era and per-season tables, factor usage, chart data, selection reasons.
-- Charts: `docs/shots/mavis-eval-*.svg` (8 files).
+- Significance JSON: `frontend/react/.tmp-audit/projection-significance.json` — references, z-tests, permutation p-values, 2×2 tables, discordant-pair counts.
+- Charts: `docs/shots/mavis-eval-*.svg` (9 files).
 
-Rebuild from `frontend/react`: `node scripts/mavis-projection-evaluation.mjs` then `node scripts/mavis-evaluation-charts.mjs`. The 1,532 event summaries are cached in the OS temp directory (`mavis-accuracy-cache/events.json`); `MAVIS_REFRESH=1` refetches everything. Teams/seasons: `MAVIS_TEAMS`, `MAVIS_SEASON_START`, `MAVIS_SEASON_END`.
+Rebuild from `frontend/react`: `node scripts/mavis-projection-evaluation.mjs`, then `node scripts/mavis-evaluation-significance.mjs`, then `node scripts/mavis-evaluation-charts.mjs`. The 1,532 event summaries are cached in the OS temp directory (`mavis-accuracy-cache/events.json`); `MAVIS_REFRESH=1` refetches everything. Teams/seasons: `MAVIS_TEAMS`, `MAVIS_SEASON_START`, `MAVIS_SEASON_END`.
 
 QA note for this change: `docs/QA-2026-11-05-to-07.md`, section 7.

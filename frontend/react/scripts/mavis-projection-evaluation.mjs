@@ -60,7 +60,12 @@
  *   A categorization AGREES (same) when it matches the actual category:
  *   high on a boom, low on a bust; otherwise different. Agreement rates
  *   are reported for the model and the baseline on booms, on busts, and
- *   overall, each with its one-sample z-test against 50%.
+ *   overall. This harness also reports a z-test against 50% - that is the
+ *   coin-flip line, NOT the skill reference. The skill reference is each
+ *   predictor's own no-skill reference (the agreement it scores with no
+ *   information about the outcome), and it is computed in
+ *   scripts/mavis-evaluation-significance.mjs. Do not read the z vs 50%
+ *   as the size of an edge.
  *
  * P (the owner's rule)
  *   P = the empirical frequency of the winning factor's high-side
@@ -294,7 +299,11 @@ const round = (x) => (Number.isFinite(x) ? Math.round(x * 100) / 100 : null);
 const round4 = (x) => (Number.isFinite(x) ? Math.round(x * 10000) / 10000 : null);
 const pct = (k, n) => (n ? Math.round((k / n) * 1000) / 10 : null);
 
-/** One-sample z-test of a rate against 50%. */
+/**
+ * One-sample z-test of a rate against 50% - the coin-flip line.
+ * NOT the skill reference; see scripts/mavis-evaluation-significance.mjs
+ * for the no-skill reference and the z-test against it.
+ */
 function zTest50(k, n) {
   if (!n) return null;
   const p = k / n;
@@ -809,7 +818,7 @@ async function main() {
       bustGame: "A target game whose ACTUAL DK points <= C.",
       modelCategorization: "The model categorizes the game HIGH iff its projection > C, LOW otherwise. Same/different only.",
       baseline: "The plain prior-games average, categorized against the SAME cut C by the SAME rule (HIGH iff > C).",
-      agreement: "A categorization agrees (same) when it matches the actual category: high on a boom, low on a bust; otherwise different. Reported for model and baseline on booms, busts, and overall, each with a one-sample z-test against 50%.",
+      agreement: "A categorization agrees (same) when it matches the actual category: high on a boom, low on a bust; otherwise different. Reported for model and baseline on booms, busts, and overall. The z carried here is against 50% (the coin-flip line); the skill reference is each side's own no-skill reference, computed in scripts/mavis-evaluation-significance.mjs.",
       P: "The empirical frequency of the winning factor's high-side condition for that player among the engine's post-peel earlier games.",
       containment: "For evaluations with an interval (earlier_n >= 4): same when the actual DK points fall inside the model's 90% interval, different otherwise.",
       lowSampleAsterisk: "Every game with >=1 earlier game gets a projection; games under " + LOW_SAMPLE_N + " earlier games are flagged in sample_flag and still projected.",
@@ -867,7 +876,8 @@ async function main() {
   // ---- 9. console headline ------------------------------------------------
   const blk = overall; // same object as the agreement headline in the JSON
   console.log("");
-  console.log("=== HEADLINE: categorization agreement, one-sample z vs 50% ===");
+  console.log("=== HEADLINE: categorization agreement (z below is vs 50%, the coin-flip line) ===");
+  console.log("=== for the skill comparison run: node scripts/mavis-evaluation-significance.mjs ===");
   console.log("model    booms:    " + blk.model.boom.rate + "% same (n=" + blk.model.boom.evaluations + ", z=" + blk.model.boom.z + ")");
   console.log("model    busts:    " + blk.model.bust.rate + "% same (n=" + blk.model.bust.evaluations + ", z=" + blk.model.bust.z + ")");
   console.log("model    overall:  " + blk.model.overall.rate + "% same (n=" + blk.model.overall.evaluations + ", z=" + blk.model.overall.z + ")");
