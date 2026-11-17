@@ -7,17 +7,17 @@ API, builds the roster, and runs a real optimizer in the browser — lineups, ex
 | | |
 |---|---|
 | **Live site** | <https://mavis-fantasy-grinder.pages.dev> — Cloudflare Pages, built from `frontend/react` |
+| **Live API** | <https://mavis-fantasy-grinder-api.ebridavid.workers.dev> — Cloudflare Worker API & server-side optimizer |
 | **Repository** | <https://github.com/Davidebri1/mavis-fantasy-grinder> |
-| **Frontend** | `frontend/react` — Vite + React 18 + TypeScript + Tailwind |
-| **Optimizer** | `frontend/react/src/optimizer` — branch-and-bound solver with an LP bound, runs in a Web Worker |
-| **Backend** | `backend/django` — Django + Postgres (slates, injury/news feeds, audit log, server-side solver). **In the repo and CI-tested; not deployed.** |
+| **Frontend** | `frontend/react` — Vite + React 18 + TypeScript + Tailwind (thin API client, zero client-side solver bundle) |
+| **Backend** | `backend/django` — Cloudflare Worker Edge API (`worker/mavis-edge-api.mjs`, live) + Django / PuLP / OR-Tools / Postgres (`Dockerfile` + `wrangler.containers.jsonc`, CI-tested) |
 
 ```bash
 cd frontend/react
 npm install
 npm run dev      # local dev server
 npm run build    # -> dist/ (this is what gets published)
-npm test         # vitest: 76 tests (stacks, portfolio, entry-value model, projections, provenance)
+npm test         # vitest: 75 tests (stacks, exposure, entry-value model, projections, provenance)
 ```
 
 Publish and prove the live site is that exact build:
@@ -27,8 +27,7 @@ node scripts/mavis-deploy-cloudflare.mjs    # uploads dist/ to the Pages project
 node scripts/mavis-verify-deploy.mjs        # compares SHA256 of every asset, local vs live
 ```
 
-**Status (2026-11-07):** live at `https://mavis-fantasy-grinder.pages.dev`, serving the build in this
-repo's tip commit — verified by SHA256, not by assumption.
+**Status (2026-11-17):** live at `https://mavis-fantasy-grinder.pages.dev`, calling `https://mavis-fantasy-grinder-api.ebridavid.workers.dev` — verified by SHA256 and end-to-end Playwright inspection.
 
 **On the name.** The product on screen is **Outlier**. The repository, the GitHub project and the
 published URL keep their original names on purpose: renaming the Cloudflare Pages project would

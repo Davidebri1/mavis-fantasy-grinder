@@ -1,18 +1,14 @@
 # Outlier — Operator Runbook
 
-For the customer / ops team. **Last verified 2026-11-04 against the live site and this repo's tip.**
+For the customer / ops team. **Last verified 2026-11-17 against the live Cloudflare Worker + Pages deployment and this repo's tip.**
 
 ## What is live today
 
 | Component | Where | Status |
 |---|---|---|
-| React frontend | **Cloudflare Pages** — <https://mavis-fantasy-grinder.pages.dev> | **Live.** Built from `frontend/react/`, published by `scripts/mavis-deploy-cloudflare.mjs`. |
-| Optimizer | In the browser (Web Worker) | **Live.** This is what the public site runs. |
-| Django API | `backend/django` | **Not deployed.** The code is in the repo and CI-tested, but nothing on the live site calls it. |
-| Postgres | — | **Not deployed.** Comes with the Django service when it is deployed. |
-
-The live site is frontend-only. Anything in this runbook that mentions `fantasy-grinder-api.onrender.com`
-describes the backend **once it is deployed** — it is not running today.
+| React frontend | **Cloudflare Pages** — <https://mavis-fantasy-grinder.pages.dev> | **Live.** Built from `frontend/react/` (`VITE_API_URL=https://mavis-fantasy-grinder-api.ebridavid.workers.dev`), published by `scripts/mavis-deploy-cloudflare.mjs`, verified by `mavis-verify-deploy.mjs`. |
+| Optimizer & REST API | **Cloudflare Worker** — <https://mavis-fantasy-grinder-api.ebridavid.workers.dev> | **Live.** Serves `/api/health/`, `/api/slates/`, `/api/players/`, `/api/optimize/`, `/api/import/*`, `/api/export/*` at the edge via `backend/django/worker/mavis-container-proxy.mjs` + `mavis-edge-api.mjs` (zero solver code in client bundle). |
+| Django + Postgres (full container target) | `backend/django` (`wrangler.containers.jsonc`, `Dockerfile`) | **Ready & CI-tested.** Optional container upgrade when Workers Paid + Docker daemon are active; `mavis-container-proxy.mjs` automatically forwards to `env.DJANGO_CONTAINER` when bound. |
 
 ## Health checks
 
@@ -26,8 +22,8 @@ cd frontend/react
 node scripts/mavis-verify-deploy.mjs
 # → hashes every asset the live HTML references and compares it with dist/
 
-# Backend liveness — only after the Django service is deployed
-curl https://fantasy-grinder-api.onrender.com/api/health/
+# Backend liveness (live)
+curl https://mavis-fantasy-grinder-api.ebridavid.workers.dev/api/health/
 # → {"status":"ok","service":"fantasy-grinder-api","version":"1.0.0","db":"ok"}
 ```
 
@@ -126,22 +122,20 @@ node scripts/mavis-deploy-cloudflare.mjs --check   # auth + target, uploads noth
 that is the one-time case above. Fix it and move on — it is not a recurring
 step and it is never a question for the customer.**
 
-### Backend (Cloudflare Containers + Worker Proxy)
+### Backend (Cloudflare Worker Edge API + Optional Containers Proxy)
 
-Configured in `backend/django/` via `Dockerfile`, `wrangler.jsonc`, and
-`worker/mavis-container-proxy.mjs` (replacing the retired Render setup):
+Configured in `backend/django/` via `wrangler.jsonc`, `worker/mavis-container-proxy.mjs`, and
+`worker/mavis-edge-api.mjs` (replacing the retired Render setup; container-bound config preserved in `wrangler.containers.jsonc` + `Dockerfile`):
 
 ```bash
 cd backend/django
 npm install
-npx wrangler@4.157.0 secret put DATABASE_URL
-npx wrangler@4.157.0 secret put DJANGO_SECRET_KEY
-npx wrangler@4.157.0 secret put ODDS_API_KEY
 npx wrangler@4.157.0 deploy
 ```
 
-Note: Cloudflare Containers requires the **Workers Paid plan** on the Cloudflare account and a
-running Docker daemon to build and push `./Dockerfile` (`gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120`).
+Note: Upgrading from the edge Worker runtime to the Dockerized Django + Gunicorn container requires
+the **Workers Paid plan**, Docker daemon, and deploying with `wrangler.containers.jsonc` plus secrets
+(`DATABASE_URL`, `DJANGO_SECRET_KEY`, `ODDS_API_KEY`).
 
 ### Rollback
 

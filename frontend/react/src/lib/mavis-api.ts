@@ -15,12 +15,24 @@ export interface ApiSlate {
   player_count?: number;
 }
 
+const PRODUCTION_DEFAULT_API_URL =
+  "https://mavis-fantasy-grinder-api.ebridavid.workers.dev";
+
 /** Resolve API base URL ending with `/api` without trailing slash. */
 export function resolveApiBase(): string {
   const raw = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? "";
-  if (!raw) return "/api";
-  const trimmed = raw.replace(/\/+$/, "");
-  return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
+  if (raw) {
+    const trimmed = raw.replace(/\/+$/, "");
+    return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
+  }
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1"
+  ) {
+    return `${PRODUCTION_DEFAULT_API_URL}/api`;
+  }
+  return "/api";
 }
 
 export function apiUrl(path: string): string {

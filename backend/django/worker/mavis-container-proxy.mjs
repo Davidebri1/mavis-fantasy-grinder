@@ -1,9 +1,13 @@
 /**
- * Thin Cloudflare Worker proxy forwarding HTTP traffic to the Django Gunicorn
- * container running on port 8000. Secrets (DATABASE_URL, DJANGO_SECRET_KEY,
- * ODDS_API_KEY) and non-secret vars are forwarded into container envVars.
+ * Cloudflare Worker entrypoint for `mavis-fantasy-grinder-api`.
+ *
+ * When deployed with a Cloudflare Container binding (`env.DJANGO_CONTAINER`),
+ * forwards HTTP traffic directly to the Django + Gunicorn container on port 8000.
+ * Otherwise serves the built-in Cloudflare Edge API handler (`handleEdgeApiRequest`)
+ * with zero Docker or container plan dependency.
  */
 import { Container, getContainer } from "@cloudflare/containers";
+import { handleEdgeApiRequest } from "./mavis-edge-api.mjs";
 
 export class MavisDjangoContainer extends Container {
   defaultPort = 8000;
@@ -24,7 +28,10 @@ export class MavisDjangoContainer extends Container {
 
 export default {
   async fetch(request, env) {
-    const container = getContainer(env.DJANGO_CONTAINER, "primary");
-    return container.fetch(request);
+    if (env?.DJANGO_CONTAINER) {
+      const container = getContainer(env.DJANGO_CONTAINER, "primary");
+      return container.fetch(request);
+    }
+    return handleEdgeApiRequest(request, env);
   },
 };

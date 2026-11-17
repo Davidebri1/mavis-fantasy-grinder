@@ -1,15 +1,20 @@
 # Deployment — publishing to Cloudflare Pages and proving what is live
 
-## The live site, as of 2026-11-04
+## The live site & backend API (permanent Cloudflare deployment)
 
-The public site is **https://mavis-fantasy-grinder.pages.dev/**, a **Cloudflare Pages** project named
-`mavis-fantasy-grinder`, deployed from the `frontend/react` directory's `dist` output.
+- **Frontend (Cloudflare Pages)**: **https://mavis-fantasy-grinder.pages.dev/** — project `mavis-fantasy-grinder`, built from `frontend/react` with `VITE_API_URL=https://mavis-fantasy-grinder-api.ebridavid.workers.dev` (and falling back to that same Worker URL automatically on non-localhost origins).
+- **Backend Optimizer & Data API (Cloudflare Worker)**: **https://mavis-fantasy-grinder-api.ebridavid.workers.dev** — Worker `mavis-fantasy-grinder-api`, deployed from `backend/django/` (`wrangler.jsonc`, `worker/mavis-container-proxy.mjs`, `worker/mavis-edge-api.mjs`). Serves `/api/health/`, `/api/slates/`, `/api/players/`, `/api/optimize/`, `/api/import/*`, and `/api/export/*` at the edge when `DJANGO_CONTAINER` is unbound, and proxies to Gunicorn/Postgres when `wrangler.containers.jsonc` is used.
 
 ```bash
-cd frontend/react
-npm run build                                    # produces dist/
-node scripts/mavis-deploy-cloudflare.mjs         # uploads dist/ to Cloudflare Pages
-node scripts/mavis-verify-deploy.mjs             # proves the live site is that build
+# 1. Deploy backend API Worker
+cd backend/django
+npx wrangler@4.157.0 deploy
+
+# 2. Build & publish frontend Pages bundle against live Worker
+cd ../../frontend/react
+VITE_API_URL=https://mavis-fantasy-grinder-api.ebridavid.workers.dev npm run build
+node scripts/mavis-deploy-cloudflare.mjs
+node scripts/mavis-verify-deploy.mjs             # proves the live site matches dist/ by SHA256
 ```
 
 Authentication is wrangler's own (`npx wrangler login`, which opens a browser and asks the operator to
@@ -76,9 +81,10 @@ the git history.
    screen.
 4. `node scripts/mavis-deploy-cloudflare.mjs`.
 5. `node scripts/mavis-verify-deploy.mjs` — it must print `MATCH` and exit 0.
-6. Deploy the Django API container backend from `backend/django/` using `npx wrangler@4.157.0 deploy`
-   (`Dockerfile`, `wrangler.jsonc`, `worker/mavis-container-proxy.mjs`, requires Cloudflare Workers Paid
-   plan with Containers enabled and Docker daemon for building the image).
+6. Deploy the backend Worker from `backend/django/` using `npx wrangler@4.157.0 deploy`
+   (`wrangler.jsonc`, `worker/mavis-container-proxy.mjs`, `worker/mavis-edge-api.mjs`). For optional
+   full Django/Postgres container hosting, use `wrangler.containers.jsonc` (`Dockerfile` + Workers Paid
+   plan with Containers enabled and Docker daemon).
 7. Note the commit hash and the deployment URL in the next dated wiki entry.
 
 See also [mavis-locations.md](mavis-locations.md) for where the build output sits on disk.
