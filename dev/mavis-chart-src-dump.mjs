@@ -1,0 +1,12 @@
+import { readFileSync } from "node:fs";
+const p = "C:\\Users\\D\\mavis-fantasy-grinder\\frontend\\react\\scripts\\mavis-evaluation-charts.mjs";
+const t = readFileSync(p, "utf8");
+const lines = t.split("\n");
+console.log("--- lines 66..92 raw ---");
+for (let i = 65; i < 92; i++) console.log((i + 1) + ": " + JSON.stringify(lines[i]));
+console.log("");
+console.log("--- every line containing a doubled quote \"\" ---");
+lines.forEach((l, i) => { if (l.includes('""')) console.log((i + 1) + ": " + JSON.stringify(l)); });
+console.log("");
+console.log("--- every line where a quote appears immediately before / (i.e. \"\" /> or \"\"/ ) ---");
+lines.forEach((l, i) => { if (/""\s*\/?>/.test(l)) console.log((i + 1) + ": " + JSON.stringify(l)); });
