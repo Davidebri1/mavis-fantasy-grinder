@@ -1,3 +1,6 @@
+// Diagnostic (2026-11-22): scans the local runtime database and the
+// session history for references to the stale Collider workspace path,
+// so a leftover binding is caught instead of assumed away.
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
