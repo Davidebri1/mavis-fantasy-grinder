@@ -22,3 +22,11 @@ preview.err
 # Scratch space for audits and one-off checks
 .tmp-audit/
 
+# Large DraftKings reference payloads (third-party captures, too big to commit)
+dev/dk-lobbies-nfl.json
+dev/dk-lobby-client.js
+dev/dk-bundleconfig.json
+
+# Generated fact extracts (rebuilt by dev/mavis-doc-facts.mjs)
+dev/mavis-doc-facts.json
+
