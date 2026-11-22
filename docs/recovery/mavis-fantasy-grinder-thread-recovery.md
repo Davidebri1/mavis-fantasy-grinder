@@ -59,7 +59,7 @@ original picked up "fix" and started the ownership/salary audit.
 ## The collision that had to be settled
 
 Both revived threads were running turns against the **same working tree**
-(`C:\Users\D\mavis-fantasy-grinder`, branch `main`), and the fork was already
+(`C:\Users\D\mavis-outlier`, branch `main`), and the fork was already
 force-pushing. Two agents committing one checkout clobber each other and leave Dave
 guessing which thread did what.
 
@@ -95,7 +95,7 @@ Both threads now take input normally. Neither is wedged any more.
 | `mavis-fantasy-grinder-recovery-digest-7ac968d5.md` | Pinned fork: snapshot + everything after it |
 | `mavis-fantasy-grinder-thread-recovery.md` | This record |
 
-Exporter: `C:\Users\D\mavis-fantasy-grinder\dev\export_thread_archive.py`
+Exporter: `C:\Users\D\mavis-outlier\dev\export_thread_archive.py`
 (`python export_thread_archive.py <messages.jsonl> <archive.md> <digest.md>`).
 It strips injected system-reminder blocks and keeps the thread's own compaction
 summaries, so the digest is the thread's real state - not a reconstruction.

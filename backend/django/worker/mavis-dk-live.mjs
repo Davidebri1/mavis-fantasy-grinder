@@ -1,5 +1,5 @@
 /**
- * Mavis Fantasy Grinder — live DraftKings slate for the edge API.
+ * Mavis Outlier — live DraftKings slate for the edge API.
  *
  * The Worker's job is to hand the app the slate DraftKings is actually
  * selling right now: real published salaries, DraftKings' own projections,

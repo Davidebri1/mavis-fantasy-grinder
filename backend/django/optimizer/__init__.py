@@ -1,4 +1,4 @@
-"""Optimizer engine for Fantasy Grinder.
+"""Optimizer engine for Outlier.
 
 This package is the **kernel** of the backend. It is intentionally
 framework-free (no Django, no DRF, no DRF serializers) so it can be:

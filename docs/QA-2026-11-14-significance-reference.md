@@ -1,5 +1,11 @@
 # QA — the reference line for agreement rates (2026-11-14)
 
+> **Superseded 2026-11-22.** The evaluation was rebuilt on the control-limit yardstick: see
+> [QA-2026-11-22-control-limit-rebuild.md](QA-2026-11-22-control-limit-rebuild.md) and
+> [mavis-projection-evaluation.md](mavis-projection-evaluation.md). The script named below,
+> `mavis-evaluation-significance.mjs`, was removed on 2026-11-22; its method now lives in
+> `mavis-control-limit-significance.mjs`. The text below is kept exactly as it was written.
+
 Built by mavis. Triggered by the owner's question: **"against 50%? what does that even mean?"**
 
 ## 1. Symptom

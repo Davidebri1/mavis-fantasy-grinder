@@ -1,7 +1,7 @@
 // mavis-limit-tie-rows.mjs — counts and identities for the published 1e-9 tie tolerance.
 import { readFileSync } from "node:fs";
 
-const csv = readFileSync("C:/Users/D/mavis-fantasy-grinder/frontend/react/.tmp-audit/projection-evaluation.csv", "utf8");
+const csv = readFileSync("C:/Users/D/mavis-outlier/frontend/react/.tmp-audit/projection-evaluation.csv", "utf8");
 function parseLine(line) {
   const out = []; let cur = ""; let q = false;
   for (let i = 0; i < line.length; i++) {

@@ -1,4 +1,4 @@
-$dir = "C:\Users\D\mavis-fantasy-grinder\docs\shots"
+$dir = "C:\Users\D\mavis-outlier\docs\shots"
 function Dump($file, $from, $to) {
   $t = [System.Text.Encoding]::UTF8.GetString([System.IO.File]::ReadAllBytes($file))
   Write-Output ("=== " + (Split-Path $file -Leaf) + " (len " + $t.Length + ")")

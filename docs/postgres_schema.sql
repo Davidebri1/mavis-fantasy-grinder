@@ -1,4 +1,4 @@
--- Fantasy Grinder — Postgres schema (R1 / R4 deliverable)
+-- Outlier — Postgres schema (R1 / R4 deliverable)
 -- Replaces the Supabase tables used by the Flutter app.
 -- Target: Postgres 15+ (external managed Postgres connected via DATABASE_URL).
 

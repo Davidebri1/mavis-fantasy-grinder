@@ -1,5 +1,5 @@
 /**
- * Mavis Fantasy Grinder — Serverless Cloudflare Worker Edge API
+ * Mavis Outlier — Serverless Cloudflare Worker Edge API
  *
  * Implements all REST endpoints (`/api/health/`, `/api/slates/`,
  * `/api/slates/<id>/`, `/api/players/`, `/api/optimize/`,

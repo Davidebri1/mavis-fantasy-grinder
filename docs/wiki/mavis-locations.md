@@ -5,7 +5,7 @@ All paths below were confirmed to resolve on **2026-11-04** unless a different d
 ## The canonical home
 
 - **Repository**: the private GitHub repo `Davidebri1/mavis-fantasy-grinder`, branch `main`.
-- **Local checkout**: `C:\Users\D\mavis-fantasy-grinder`.
+- **Local checkout**: `C:\Users\D\mavis-outlier`.
 - As of 2026-11-04 the tip commit of that checkout was `7aec943`.
 - A second git remote, named `monorepo`, points at the monorepo checkout for history access.
 
@@ -34,7 +34,7 @@ Google Drive for Desktop on this machine mounts **four separate accounts**, each
 | `G:\My Drive` | account 3 | present |
 | `H:\My Drive` | account 4 | present |
 
-As of **2026-11-03 there was NO copy of the Fantasy Grinder app in any Drive account.** The four
+As of **2026-11-03 there was NO copy of the Outlier app in any Drive account.** The four
 near-misses, all of which are *not* the app:
 
 - `P:\My Drive\DFS optimizer 1\dfs-optimizer-app` — a **different repo**, older build.
@@ -45,14 +45,14 @@ near-misses, all of which are *not* the app:
   Tailwind product state**, not this app.
 
 The practical consequence: the Drive is not a backup of the current product. The git repository at
-`C:\Users\D\mavis-fantasy-grinder` is the only copy of the current code, and the 2026-11-03 rescue in
+`C:\Users\D\mavis-outlier` is the only copy of the current code, and the 2026-11-03 rescue in
 [mavis-repository-extraction.md](mavis-repository-extraction.md) is the reason the newest work exists at all.
 
 ## Build output and public site
 
-- **Frontend source**: `C:\Users\D\mavis-fantasy-grinder\frontend\react`
-- **Build output**: `C:\Users\D\mavis-fantasy-grinder\frontend\react\dist` — this is what gets published.
-- **Backend source**: `C:\Users\D\mavis-fantasy-grinder\backend\django`
+- **Frontend source**: `C:\Users\D\mavis-outlier\frontend\react`
+- **Build output**: `C:\Users\D\mavis-outlier\frontend\react\dist` — this is what gets published.
+- **Backend source**: `C:\Users\D\mavis-outlier\backend\django`
 - **Live public site**: <https://mavis-fantasy-grinder.pages.dev> — Cloudflare Pages project
   `mavis-fantasy-grinder`. (Before 2026-11-04 this was `https://fantasygrinder.surge.sh/`, which
   still serves the abandoned September build. See [mavis-deployment.md](mavis-deployment.md).)
@@ -65,7 +65,7 @@ The practical consequence: the Drive is not a backup of the current product. The
 ## 2026-11-04 — where things live after the rename
 
 - Repository: `Davidebri1/mavis-fantasy-grinder` (public). The old name redirects.
-- Local checkout: `C:\Users\D\mavis-fantasy-grinder`.
+- Local checkout: `C:\Users\D\mavis-outlier`.
 - Live site: <https://mavis-fantasy-grinder.pages.dev> (Cloudflare Pages project
   `mavis-fantasy-grinder`).
 - Scripts live in `frontend/react/scripts/` and carry the `mavis-` prefix:

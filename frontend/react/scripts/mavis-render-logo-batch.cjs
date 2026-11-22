@@ -16,9 +16,9 @@ function findChromium() {
 (async () => {
   const b = await chromium.launch({ executablePath: findChromium() });
   const p = await b.newPage({ viewport: { width: 800, height: 1230 } });
-  await p.goto("file:///C:/Users/D/mavis-fantasy-grinder/docs/brand/mavis-logo-batch.html");
+  await p.goto("file:///C:/Users/D/mavis-outlier/docs/brand/mavis-logo-batch.html");
   await p.waitForTimeout(600);
-  await p.screenshot({ path: "C:/Users/D/mavis-fantasy-grinder/docs/brand/mavis-logo-batch.png" });
+  await p.screenshot({ path: "C:/Users/D/mavis-outlier/docs/brand/mavis-logo-batch.png" });
   await b.close();
   console.log("rendered");
 })().catch((e) => { console.error(String(e).slice(0, 300)); process.exit(1); });

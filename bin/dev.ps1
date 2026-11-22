@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Fantasy Grinder — one-command local dev launcher (Windows / pwsh).
+# Outlier — one-command local dev launcher (Windows / pwsh).
 #
 # What it does, in order:
 #   1. Install backend Python deps into .venv (one-time, ~30s).
@@ -66,7 +66,7 @@ Pop-Location
 # ─── Run ─────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "================================================================"
-Write-Host "  Fantasy Grinder is starting..."
+Write-Host "  Outlier is starting..."
 Write-Host "    Open: http://localhost:8000/"
 Write-Host "  Press Ctrl+C to stop."
 Write-Host "================================================================"

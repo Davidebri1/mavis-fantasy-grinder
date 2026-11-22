@@ -36,7 +36,7 @@ function findChromium() {
 }
 
 const url = process.argv[2] ?? "http://127.0.0.1:4174/";
-const outDir = process.argv[3] ?? "C:/Users/D/mavis-fantasy-grinder/docs/shots";
+const outDir = process.argv[3] ?? "C:/Users/D/mavis-outlier/docs/shots";
 const label = process.argv[4] ?? "shot";
 
 (async () => {

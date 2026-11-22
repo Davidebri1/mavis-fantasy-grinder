@@ -1,13 +1,13 @@
-# Fantasy Grinder — project wiki
+# Outlier — project wiki
 
-Durable tribal knowledge for the Fantasy Grinder DFS lineup optimizer. Written on 2026-11-04.
+Durable tribal knowledge for the Outlier DFS lineup optimizer. Written on 2026-11-04.
 
 Every claim in this wiki is dated. Claims about code cite the commit they were true at, in the form
 `Davidebri1/mavis-fantasy-grinder@<hash>`. When a later change supersedes an earlier statement, the earlier
 statement is kept and marked **superseded** — it is never rewritten or deleted.
 
 - Canonical repository: the private GitHub repo `Davidebri1/mavis-fantasy-grinder`, branch `main`.
-- Local checkout: `C:\Users\D\mavis-fantasy-grinder`.
+- Local checkout: `C:\Users\D\mavis-outlier`.
 - As of 2026-11-04 the tip commit of that checkout was `7aec943`.
 
 If you are a future agent with no memory of this project, read this page first, then the page that
@@ -59,7 +59,7 @@ pages above in several places; where they disagree with a wiki page, the dated w
 
 - The repository was renamed to `Davidebri1/mavis-fantasy-grinder` and made **public**. The old URL
   (`Davidebri1/fantasygrinder`) redirects to the new one. The local checkout moved to
-  `C:\Users\D\mavis-fantasy-grinder`.
+  `C:\Users\D\mavis-outlier`.
 - **Naming rule set by the project owner on 2026-11-04:** everything created for this project carries
   "mavis" plus a descriptive subject in its filename or title — the repo, the folder, the scripts, the
   wiki pages, the screenshots, the Cloudflare Pages project (`mavis-fantasy-grinder`). Descriptive,
@@ -68,3 +68,9 @@ pages above in several places; where they disagree with a wiki page, the dated w
   <https://mavis-fantasy-grinder.pages.dev>. See [mavis-deployment.md](mavis-deployment.md).
 - The home screen changed again: the sport cards no longer overlap the banner. See
   [mavis-home-screen-layout.md](mavis-home-screen-layout.md).
+
+## 2026-11-22
+
+- The product's display name is **Outlier**. The API title, the launchers, the OpenAPI spec, the Django admin title and the wiki now say Outlier.
+- The local checkout moved to `C:\Users\D\mavis-outlier` (renamed from `C:\Users\D\mavis-fantasy-grinder`). Every script and doc pointer was retargeted in the same pass.
+- The repository, the Cloudflare Pages project and the Worker keep the `mavis-fantasy-grinder` slug, and the live URLs are unchanged, because renaming them would break the deployed site and the API the frontend calls.

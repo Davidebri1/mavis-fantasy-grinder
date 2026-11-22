@@ -1,4 +1,4 @@
-# Fantasy Grinder — Architecture (React + Django)
+# Outlier — Architecture (React + Django)
 
 Target system shape: React single-page app talking to a Django REST API + Postgres.
 

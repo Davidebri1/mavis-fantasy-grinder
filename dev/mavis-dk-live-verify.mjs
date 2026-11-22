@@ -1,5 +1,5 @@
 /**
- * Mavis Fantasy Grinder — verify the DEPLOYED edge API serves the live
+ * Mavis Outlier — verify the DEPLOYED edge API serves the live
  * DraftKings slate and builds lineups from it.
  */
 const BASE = "https://mavis-fantasy-grinder-api.ebridavid.workers.dev/api";

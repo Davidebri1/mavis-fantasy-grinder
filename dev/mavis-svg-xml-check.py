@@ -1,7 +1,7 @@
 import glob, os, sys
 import xml.etree.ElementTree as ET
 
-d = r"C:\Users\D\mavis-fantasy-grinder\docs\shots"
+d = r"C:\Users\D\mavis-outlier\docs\shots"
 for p in sorted(glob.glob(os.path.join(d, "mavis-eval-*.svg"))):
     name = os.path.basename(p)
     with open(p, encoding="utf-8") as f:

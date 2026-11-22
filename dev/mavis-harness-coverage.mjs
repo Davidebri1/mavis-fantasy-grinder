@@ -1,5 +1,5 @@
 import fs from "node:fs";
-const h = JSON.parse(fs.readFileSync("C:/Users/D/mavis-fantasy-grinder/frontend/react/.tmp-audit/projection-evaluation.json", "utf8"));
+const h = JSON.parse(fs.readFileSync("C:/Users/D/mavis-outlier/frontend/react/.tmp-audit/projection-evaluation.json", "utf8"));
 const cov = h.coverage || {};
 const out = {};
 for (const [k, v] of Object.entries(cov)) {

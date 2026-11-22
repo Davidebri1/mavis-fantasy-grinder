@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 const dbPath = "C:\\Users\\D\\.minimax\\v2\\sqlite\\runtime-state.sqlite";
 const sid = process.argv[2] || "mvs_7ac968d537334b5d9d587015fbfd2c3b";
 const TARGET = "C:\\Users\\D\\mavis-fantasy-grinder";
-const TARGET_SLASH = "C:/Users/D/mavis-fantasy-grinder";
+const TARGET_SLASH = "C:/Users/D/mavis-outlier";
 
 const backup = dbPath + ".bak-before-workspace-rebind-" + Date.now();
 fs.copyFileSync(dbPath, backup);

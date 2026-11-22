@@ -1,4 +1,4 @@
-# Product — what Fantasy Grinder is
+# Product — what Outlier is
 
 > **Current state, 2026-11-14.** All optimization, strategy execution, constraint enforcement, and
 > exports run exclusively on the **Django REST API** (`backend/django/`, configured for Cloudflare
@@ -11,10 +11,10 @@
 
 ## The short version
 
-As of 2026-11-03, Fantasy Grinder is a DFS (daily fantasy sports) lineup optimizer covering **NBA, MMA
+As of 2026-11-03, Outlier is a DFS (daily fantasy sports) lineup optimizer covering **NBA, MMA
 and Golf**, built as a **Django + Postgres backend** with a **React/Vite frontend**.
 
-As of `Davidebri1/mavis-fantasy-grinder@7aec943` (2026-11-03), the repository at `C:\Users\D\mavis-fantasy-grinder`
+As of `Davidebri1/mavis-fantasy-grinder@7aec943` (2026-11-03), the repository at `C:\Users\D\mavis-outlier`
 held:
 
 - `backend/django/` — Django + Postgres service. Apps `nba`, `mma`, `golf`, `common`; the optimizer

@@ -6,7 +6,7 @@
  * optimizer API exactly as the page does.
  */
 const { fetchLiveDkRoster } = await import(
-  "file:///C:/Users/D/mavis-fantasy-grinder/frontend/react/src/lib/dk-live.ts"
+  "file:///C:/Users/D/mavis-outlier/frontend/react/src/lib/dk-live.ts"
 );
 
 console.log("node", process.version);

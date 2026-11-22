@@ -1,5 +1,5 @@
 $ErrorActionPreference = "Continue"
-$dir = "C:\Users\D\mavis-fantasy-grinder\docs\shots"
+$dir = "C:\Users\D\mavis-outlier\docs\shots"
 Get-ChildItem $dir -Filter "mavis-eval-*.svg" | Sort-Object Name | ForEach-Object {
   $path = $_.FullName
   $bytes = [System.IO.File]::ReadAllBytes($path)

@@ -1,5 +1,5 @@
 import fs from "node:fs";
-const f = JSON.parse(fs.readFileSync("C:/Users/D/mavis-fantasy-grinder/dev/mavis-doc-facts.json", "utf8"));
+const f = JSON.parse(fs.readFileSync("C:/Users/D/mavis-outlier/dev/mavis-doc-facts.json", "utf8"));
 const cov = { ...f.coverage };
 if (Array.isArray(cov.perSeason)) cov.perSeason = "per-season table: " + cov.perSeason.length + " seasons (in the JSON, not quoted here)";
 if (Array.isArray(cov.seasons)) cov.seasons = "per-season table: " + cov.seasons.length + " seasons (in the JSON, not quoted here)";

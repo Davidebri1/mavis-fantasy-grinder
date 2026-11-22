@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-const t = fs.readFileSync('C:/Users/D/mavis-fantasy-grinder/dev/dk-lobby-client.js', 'utf8');
+const t = fs.readFileSync('C:/Users/D/mavis-outlier/dev/dk-lobby-client.js', 'utf8');
 const re = /["'`]((?:https?:\/\/|\/)[A-Za-z0-9_\-\/\.\{\}\$%]{3,140})["'`]/g;
 const seen = new Map();
 let m;

@@ -1,6 +1,6 @@
 // mavis-doc-facts.mjs - prints the facts the evaluation document quotes.
 import fs from "node:fs";
-const base = "C:/Users/D/mavis-fantasy-grinder/frontend/react/.tmp-audit/";
+const base = "C:/Users/D/mavis-outlier/frontend/react/.tmp-audit/";
 const harness = JSON.parse(fs.readFileSync(base + "projection-evaluation.json", "utf8"));
 const limits = JSON.parse(fs.readFileSync(base + "projection-control-limits.json", "utf8"));
 const sig = JSON.parse(fs.readFileSync(base + "projection-control-limit-significance.json", "utf8"));
@@ -43,7 +43,7 @@ const out = {
     containment: sig.containment, coverage: sig.coverage, references: sig.references,
   },
 };
-fs.writeFileSync("C:/Users/D/mavis-fantasy-grinder/dev/mavis-doc-facts.json", JSON.stringify(out, null, 1));
+fs.writeFileSync("C:/Users/D/mavis-outlier/dev/mavis-doc-facts.json", JSON.stringify(out, null, 1));
 console.log("wrote dev/mavis-doc-facts.json");
 console.log(JSON.stringify({
   coverage: out.coverage,

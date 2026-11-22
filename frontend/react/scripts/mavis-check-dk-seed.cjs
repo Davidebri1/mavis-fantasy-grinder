@@ -24,7 +24,7 @@ function findChromium() {
   console.log("players visible:", /T. Lawrence|Lamar Jackson|Z. Flowers|Derrick Henry|Mark Andrews/i.test(body));
   console.log("salary column:", body.includes("Salary"));
   console.log("build button:", body.includes("Build portfolio"));
-  await p.screenshot({ path: "C:/Users/D/mavis-fantasy-grinder/docs/brand/mavis-app-dk-seed.png" });
+  await p.screenshot({ path: "C:/Users/D/mavis-outlier/docs/brand/mavis-app-dk-seed.png" });
   await b.close();
   console.log("done");
 })().catch((e) => { console.error(String(e).slice(0, 400)); process.exit(1); });

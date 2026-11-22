@@ -1,4 +1,4 @@
-"""Django settings for Fantasy Grinder backend.
+"""Django settings for Outlier backend.
 
 Split deliberately simple: a single settings module reads from environment.
 Deployed via Cloudflare Containers + Worker proxy with env vars / secrets
@@ -175,7 +175,7 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Fantasy Grinder API",
+    "TITLE": "Outlier API",
     "DESCRIPTION": "DFS lineup optimizer for NBA, NFL, MMA, and Golf.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,

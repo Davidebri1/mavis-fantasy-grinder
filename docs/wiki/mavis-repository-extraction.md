@@ -2,12 +2,12 @@
 
 ## What happened
 
-On **2026-11-03**, Fantasy Grinder was extracted out of the monorepo `Davidebri1/dfs-optimizer` into
+On **2026-11-03**, Outlier was extracted out of the monorepo `Davidebri1/dfs-optimizer` into
 its own repository.
 
 As of 2026-11-03, the canonical home of the app is the **private GitHub repo
 `Davidebri1/mavis-fantasy-grinder`**, branch `main`, with the local checkout at
-`C:\Users\D\mavis-fantasy-grinder`. As of 2026-11-04 the tip commit of that checkout was `7aec943`.
+`C:\Users\D\mavis-outlier`. As of 2026-11-04 the tip commit of that checkout was `7aec943`.
 
 ## How the extraction was done
 
@@ -24,7 +24,7 @@ work from the original chain.
 
 The new repo keeps the monorepo as a **second git remote named `monorepo`**, pointing at the local
 monorepo checkout, so the two histories stay connected. As of 2026-11-03 the remotes on
-`C:\Users\D\mavis-fantasy-grinder` were:
+`C:\Users\D\mavis-outlier` were:
 
 - `origin` → the GitHub URL of the private repo `Davidebri1/mavis-fantasy-grinder`.
 - `monorepo` → the local path of the monorepo checkout, used for fetch and push.
@@ -80,7 +80,7 @@ line up with the first 8 commits preserved in the new repo.
 
 One warning about that path, recorded 2026-11-03: it is a hidden directory tree under
 `.local\share\opencode\worktree\`, which is why plain folder searches did not surface the project. If
-you cannot find Fantasy Grinder by searching folders, look under
+you cannot find Outlier by searching folders, look under
 `C:\Users\D\.local\share\opencode\worktree\` — not just in `C:\Users\D\`.
 
 See also [mavis-locations.md](mavis-locations.md) for every other location, and

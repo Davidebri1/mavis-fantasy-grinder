@@ -1,5 +1,5 @@
 /**
- * Mavis Fantasy Grinder — live DraftKings smoke test.
+ * Mavis Outlier — live DraftKings smoke test.
  *
  * Runs the Worker's own code against DraftKings: fetch the live slate, map
  * it, and ask the Worker's optimizer for lineups built from it.

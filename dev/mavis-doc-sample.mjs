@@ -1,5 +1,5 @@
 import fs from "node:fs";
-const shots = "C:/Users/D/mavis-fantasy-grinder/docs/shots/";
+const shots = "C:/Users/D/mavis-outlier/docs/shots/";
 const names = ["stable","bimodal","wild","middling","regime"];
 for (const n of names) {
   const t = fs.readFileSync(shots + "mavis-eval-histogram-" + n + ".svg", "utf8");
@@ -8,7 +8,7 @@ for (const n of names) {
   console.log(n + " | " + (lim ? lim[1] + " / " + lim[2] + " / R " + lim[3] : "NOT FOUND") + " | " + (title ? title[1] : ""));
 }
 // a live sample of CSV rows for the most-evaluated player
-const csv = fs.readFileSync("C:/Users/D/mavis-fantasy-grinder/frontend/react/.tmp-audit/projection-evaluation.csv", "utf8");
+const csv = fs.readFileSync("C:/Users/D/mavis-outlier/frontend/react/.tmp-audit/projection-evaluation.csv", "utf8");
 function parseCsv(text) {
   const rows = []; let field = ""; let row = []; let inQ = false;
   for (let i = 0; i < text.length; i++) {

@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
  * click Generate, see lineups. Skipped when the backend isn't reachable.
  */
 
-test.describe("Fantasy Grinder — smoke", () => {
+test.describe("Outlier — smoke", () => {
   test("home page loads and links to sport pages", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /Choose your sport/i })).toBeVisible();

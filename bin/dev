@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fantasy Grinder — one-command local dev launcher (macOS/Linux).
+# Outlier — one-command local dev launcher (macOS/Linux).
 #
 #   ./bin/dev           # full setup + start
 #   ./bin/dev --reset   # nuke .venv, dist, db.sqlite3, node_modules and start over
@@ -52,7 +52,7 @@ fi
 # Run
 echo ""
 echo "================================================================"
-echo "  Fantasy Grinder is starting..."
+echo "  Outlier is starting..."
 echo "    Open: http://localhost:8000/"
 echo "  Press Ctrl+C to stop."
 echo "================================================================"

@@ -85,7 +85,7 @@ def main(src, out_archive, out_digest):
             f.write("\n## %s  %s\n\n%s\n" % (label, stamp(ts), t))
     last_sum = summaries[-1][1] if summaries else ""
     with open(out_digest, "w", encoding="utf-8") as f:
-        f.write("# Fantasy Grinder - recovery digest\n\n")
+        f.write("# Outlier - recovery digest\n\n")
         f.write("Regenerated from the on-disk transcript. Nothing here is a reconstruction from memory;\n")
         f.write("it is the thread's own content.\n\n")
         f.write("## 1. Last successful compaction summary (the thread's own state snapshot)\n\n")

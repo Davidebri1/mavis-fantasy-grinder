@@ -1,4 +1,4 @@
-# Fantasy Grinder Django backend
+# Outlier Django backend
 
 Django 5 + DRF REST API for DFS lineup optimization. Replaces the Flutter app's
 Supabase + inline compute with a self-hosted Python service.

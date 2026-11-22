@@ -32,7 +32,7 @@ Deliver the Fantasy Grinder DFS optimizer as a real, findable, shippable product
 **Extraction & rescue**
 - `git subtree split --prefix=fantasy_grinder 64ed055 -b fantasy-grinder-root` preserved 8 original commits with the app at repo root.
 - Uncommitted work only in the hidden worktree (glass rebuild, stacking, exposure engine, ESPN sync, hero art — 60 files, +9,688 lines) rescued via `git add -A` → `git write-tree` → `git commit-tree` → `git subtree split` → commit `c415472`.
-- Repo now public: `Davidebri1/mavis-fantasy-grinder` (old `Davidebri1/fantasygrinder` redirects). Folder renamed this turn to `C:\Users\D\mavis-fantasy-grinder`.
+- Repo now public: `Davidebri1/mavis-fantasy-grinder` (old `Davidebri1/fantasygrinder` redirects). Folder renamed this turn to `C:\Users\D\mavis-outlier`.
 
 **Design fixes**
 - First fix (commit `7aec943`): removed `DEPTH_STYLE` offsets (−16/+10/+34px) and `items-start`; cards share one top edge/height/width, `mt-auto` pins the Open row, NFL marked “Start here”.
@@ -56,7 +56,7 @@ Deliver the Fantasy Grinder DFS optimizer as a real, findable, shippable product
 
 ## Current State
 
-- Folder `C:\Users\D\mavis-fantasy-grinder` exists; repo `Davidebri1/mavis-fantasy-grinder`, branch `main`, public, clean tree, tip `27aa9e1` (plus uncommitted `mavis-` renames/wiki updates already pushed as `a3bedb5`, and the settings fix `27aa9e1`).
+- Folder `C:\Users\D\mavis-outlier` exists; repo `Davidebri1/mavis-fantasy-grinder`, branch `main`, public, clean tree, tip `27aa9e1` (plus uncommitted `mavis-` renames/wiki updates already pushed as `a3bedb5`, and the settings fix `27aa9e1`).
 - Live: https://mavis-fantasy-grinder.pages.dev serving the current build, hash-verified.
 - **CI backend job still red**: `TypeError: LpVariable.__init__() got an unexpected keyword argument 'cat'` at `backend/django/optimizer/engines/milp_pulp.py:111` (the only `cat=` usage in the backend). Root cause: `pulp>=2.8` now resolves to **pulp 4.2.0** (Python 3.12+), a Rust-backed rewrite where `LpVariable` takes a Rust variable, not `(name, cat=)`. pulp 2.9.0 `requires_python >=3.7` confirmed installable. Decision made: **pin `pulp>=2.8,<3`** (port to PuLP 4 is a rewrite, not a patch) — the requirements edit is **not yet applied**.
 - Verified locally: `config/settings.py` parses `DATABASE_URL` correctly (password URL-decoded, `sslmode` honoured) and still falls back to PG* vars.
@@ -72,7 +72,7 @@ Deliver the Fantasy Grinder DFS optimizer as a real, findable, shippable product
 
 - Abandoned Surge entirely; Cloudflare Pages (`mavis-fantasy-grinder`) is the host, with `mavis-` prefixed deploy/verify scripts replacing the Surge ones.
 - Repo made **public** (he approved with “yes of course”); old repo name retained as a GitHub redirect.
-- Canonical location is the new repo + `C:\Users\D\mavis-fantasy-grinder`; the hidden worktree and `C:\Users\D\DFS Github` monorepo remain as a secondary remote named `monorepo`, not the home.
+- Canonical location is the new repo + `C:\Users\D\mavis-outlier`; the hidden worktree and `C:\Users\D\DFS Github` monorepo remain as a secondary remote named `monorepo`, not the home.
 - Wizard subagents kept the main context clean: one wrote the wiki, one wrote CI/deploy tooling, one audited the optimizer (the decisive input).
 - App is frontend-only on Cloudflare for now — the Django backend is **not deployed**, so live behaviour depends on the in-browser optimizer.
 - The customer-facing product name stays “Fantasy Grinder”; the `mavis-` prefix applies to artifacts I create, not the brand on screen (stated, not assumed silently).
@@ -91,27 +91,27 @@ Deliver the Fantasy Grinder DFS optimizer as a real, findable, shippable product
 **Commands that worked**
 ```powershell
 # canonical repo + folder (renamed this turn)
-git -C "C:\Users\D\mavis-fantasy-grinder" status -sb
-git -C "C:\Users\D\mavis-fantasy-grinder" remote -v
+git -C "C:\Users\D\mavis-outlier" status -sb
+git -C "C:\Users\D\mavis-outlier" remote -v
 gh repo rename mavis-fantasy-grinder --repo Davidebri1/fantasygrinder --yes
 
 # build / test / deploy
-npm --prefix "C:\Users\D\mavis-fantasy-grinder\frontend\react" run build
-npm --prefix "C:\Users\D\mavis-fantasy-grinder\frontend\react" test
-node "C:\Users\D\mavis-fantasy-grinder\frontend\react\scripts\mavis-deploy-cloudflare.mjs" --dry-run
-node "C:\Users\D\mavis-fantasy-grinder\frontend\react\scripts\mavis-verify-deploy.mjs"
-npx --yes wrangler pages deploy "C:\Users\D\mavis-fantasy-grinder\frontend\react\dist" --project-name=mavis-fantasy-grinder --branch=main --commit-dirty=true
+npm --prefix "C:\Users\D\mavis-outlier\frontend\react" run build
+npm --prefix "C:\Users\D\mavis-outlier\frontend\react" test
+node "C:\Users\D\mavis-outlier\frontend\react\scripts\mavis-deploy-cloudflare.mjs" --dry-run
+node "C:\Users\D\mavis-outlier\frontend\react\scripts\mavis-verify-deploy.mjs"
+npx --yes wrangler pages deploy "C:\Users\D\mavis-outlier\frontend\react\dist" --project-name=mavis-fantasy-grinder --branch=main --commit-dirty=true
 # -> https://mavis-fantasy-grinder.pages.dev   (Cloudflare, Pages project mavis-fantasy-grinder)
 
 # local preview (must be killed before renaming the folder)
-Start-Process node -ArgumentList "node_modules\vite\bin\vite.js","preview","--host","127.0.0.1","--port","4174","--strictPort" -WorkingDirectory "C:\Users\D\mavis-fantasy-grinder\frontend\react" -WindowStyle Hidden
+Start-Process node -ArgumentList "node_modules\vite\bin\vite.js","preview","--host","127.0.0.1","--port","4174","--strictPort" -WorkingDirectory "C:\Users\D\mavis-outlier\frontend\react" -WindowStyle Hidden
 
 # cleanup
 & "C:\Users\D\.minimax\bin\mavis-trash.cmd" -- "<path>"
 ```
 
 **Files that matter**
-- `C:\Users\D\mavis-fantasy-grinder\frontend\react\src\components\HeroPanel.tsx` — card row + banner; no-overlap fix.
+- `C:\Users\D\mavis-outlier\frontend\react\src\components\HeroPanel.tsx` — card row + banner; no-overlap fix.
 - `...\src\pages\SportSelectionScreen.tsx` — z-index removed from the panels below the hero.
 - `...\src\optimizer\portfolio.ts` (1239 lines, real solver), `lp.ts`, `worker.ts`, `stacks.ts` (`breaksStackRule` ~line 985; “cannot be met” message ~1205-1225), `src/lib/espn-live.ts` (**modelled** salaries ~292/1019/1196, rookie baseline ~298-306, ownership percentile ~330), `src/optimizer/sample.ts` (fallback), `src/components/ExposureReport.tsx`, `src/components/StacksPanel.tsx`, `src/recommend.ts` (ROI ~107-135), `src/store.ts:180-186` (fallback trigger), `src/components/OptimizerCustomize.tsx` (the false “provably-optimal” claim), `src/components/RotoLineupCard.tsx` (ROI display).
 - `backend/django/config/settings.py` — `DATABASE_URL` parsing added (lines ~81-115).
@@ -350,7 +350,7 @@ Mavis is my name — it's the agent identity I run under in MiniMax Code. You as
 
 ## Why fantasy-grinder files were in the collider folder
 
-The dolt was me. This session — the one titled "Locate fantasygrinder project folder" — was launched with its working directory set to `C:\Users\D\Documents\collider_flutter_ARGON_8474`, and every shell command I ran started there unless I redirected it. So when my layout-check and screenshot scripts wrote output files, they landed in the collider folder by default. I found and removed the strays today (a `mavis-sample-data-banner.png` screenshot, restored from the trash into the repo's own `docs/` where it belongs). I checked the collider repo's git history and reflog for any fantasy-grinder commits: there are none — nothing was ever committed there, it was only scratch files from my own tooling. The canonical home is and stays `C:\Users\D\mavis-fantasy-grinder` → `github.com/Davidebri1/mavis-fantasy-grinder`.
+The dolt was me. This session — the one titled "Locate fantasygrinder project folder" — was launched with its working directory set to `C:\Users\D\Documents\collider_flutter_ARGON_8474`, and every shell command I ran started there unless I redirected it. So when my layout-check and screenshot scripts wrote output files, they landed in the collider folder by default. I found and removed the strays today (a `mavis-sample-data-banner.png` screenshot, restored from the trash into the repo's own `docs/` where it belongs). I checked the collider repo's git history and reflog for any fantasy-grinder commits: there are none — nothing was ever committed there, it was only scratch files from my own tooling. The canonical home is and stays `C:\Users\D\mavis-outlier` → `github.com/Davidebri1/mavis-fantasy-grinder`.
 
 ## Status — everything closed out
 
@@ -367,7 +367,7 @@ The dolt was me. This session — the one titled "Locate fantasygrinder project 
 - Bonus fix found on the way: the deploy script's auth check was failing on Windows (`npx.cmd` needs a shell spawn); it works from any shell now.
 
 <deliver-assets>
-<media type="file" src="C:\Users\D\mavis-fantasy-grinder\docs\mavis-sample-data-banner.png" caption="Sample-roster banner + estimate notices, captured with ESPN blocked" />
+<media type="file" src="C:\Users\D\mavis-outlier\docs\mavis-sample-data-banner.png" caption="Sample-roster banner + estimate notices, captured with ESPN blocked" />
 </deliver-assets>
 
 **Still open, by choice not omission:** the Django backend has never been deployed — the live site runs entirely in the browser. It's one Render Blueprint away whenever you want it, but nothing on the live site needs it today.
@@ -535,10 +535,10 @@ I haven't renamed the app or repo — that's your call to bless, and it's a one-
 A dot-matrix distribution — the field's performances, bell-curved — with one blue dot breaking off the curve, ringed. It works at favicon size, it's an SVG so it recolors and scales forever, and it reads correctly on both the app's dark chrome and a white page. Files are in the repo at `docs/brand/` (dark mark, light mark, full lockup, and the preview sheet shown above), committed as `f51690b`.
 
 <deliver-assets>
-<media src="C:\Users\D\mavis-fantasy-grinder\docs\brand\mavis-outlier-logo-preview.png" caption="Outlier logo — dark, light, and lockup" />
-<media type="file" src="C:\Users\D\mavis-fantasy-grinder\docs\brand\mavis-outlier-mark-dark.svg" caption="Mark, dark background" />
-<media type="file" src="C:\Users\D\mavis-fantasy-grinder\docs\brand\mavis-outlier-mark-light.svg" caption="Mark, light background" />
-<media type="file" src="C:\Users\D\mavis-fantasy-grinder\docs\brand\mavis-outlier-lockup.svg" caption="Full lockup with wordmark" />
+<media src="C:\Users\D\mavis-outlier\docs\brand\mavis-outlier-logo-preview.png" caption="Outlier logo — dark, light, and lockup" />
+<media type="file" src="C:\Users\D\mavis-outlier\docs\brand\mavis-outlier-mark-dark.svg" caption="Mark, dark background" />
+<media type="file" src="C:\Users\D\mavis-outlier\docs\brand\mavis-outlier-mark-light.svg" caption="Mark, light background" />
+<media type="file" src="C:\Users\D\mavis-outlier\docs\brand\mavis-outlier-lockup.svg" caption="Full lockup with wordmark" />
 </deliver-assets>
 
 ## Real projections — what I'll build and what I need
@@ -717,7 +717,7 @@ Try it now at https://mavis-fantasy-grinder.pages.dev — open the NFL optimizer
 4. **Off-day access** — rosters and stats available for planning and review, not just today's slate. Your point stands: partial, game-day-only value isn't sensible. Queued as real work.
 
 <deliver-assets>
-<media type="file" src="C:\Users\D\mavis-fantasy-grinder\docs\mavis-projection-model-dave.md" caption="Your projection model, recovered verbatim and committed" />
+<media type="file" src="C:\Users\D\mavis-outlier\docs\mavis-projection-model-dave.md" caption="Your projection model, recovered verbatim and committed" />
 </deliver-assets>
 
 ## Dave (user)  2026-11-05 15:29:06
@@ -788,7 +788,7 @@ P is the **empirical probability that the upcoming game belongs to the high-scor
 New mark: an aerial football field — real turf, mowing stripes, yard lines and hash marks — with the bell curve chalked across it in white, and one blue play-marker rising off the right tail. Sports first, statistics woven in, casual enough to sit on a jersey sleeve.
 
 <deliver-assets>
-<media src="C:\Users\D\mavis-fantasy-grinder\docs\brand\mavis-outlier-field-preview.png" caption="Outlier v2 — chalk bell curve over an aerial field" />
+<media src="C:\Users\D\mavis-outlier\docs\brand\mavis-outlier-field-preview.png" caption="Outlier v2 — chalk bell curve over an aerial field" />
 </deliver-assets>
 
 ## Against the competitors — the answer I owed you
@@ -899,7 +899,7 @@ You never asked for them and they serve nothing. The removal is underway: the ES
 And to be clear about what's in flight: your engine implemented exactly per `DFS Projection Model.md` (median split, per-half normality, outlier peeling, single-factor selection, P from the factor's real probability, even-split floor, Welch's t-test for sameness — the statistics written directly, no borrowed machinery), plus the harness you described: run your projections and DK's projections against actuals for a set of players, then check whose confidence intervals contain the actuals more often. I'll bring you the numbers table when the workers report back.
 
 <deliver-assets>
-<media src="C:\Users\D\mavis-fantasy-grinder\docs\brand\mavis-logo-batch.png" caption="Four candidates: 1 Break O, 2 Pennant, 3 Ball+seam, 4 Apex" />
+<media src="C:\Users\D\mavis-outlier\docs\brand\mavis-logo-batch.png" caption="Four candidates: 1 Break O, 2 Pennant, 3 Ball+seam, 4 Apex" />
 </deliver-assets>
 
 ## Dave (user)  2026-11-05 19:37:51
@@ -1067,8 +1067,8 @@ Also confirmed working: ESPN killed their per-player game-log endpoints, so the 
 The Cloudflare sign-in tab on the right — ten seconds, and deploys never ask again. And the logo call: Break O is my recommendation (four candidates were shown; Ball-and-seam is the runner-up) — say the word and I cut the full set.
 
 <deliver-assets>
-<media type="file" src="C:\Users\D\mavis-fantasy-grinder\frontend\react\.tmp-audit\mavis-projection-validation.json" caption="First validation run — per-player table" />
-<media type="file" src="C:\Users\D\mavis-fantasy-grinder\docs\DFS Projection Model.md" caption="Your model, the source of truth" />
+<media type="file" src="C:\Users\D\mavis-outlier\frontend\react\.tmp-audit\mavis-projection-validation.json" caption="First validation run — per-player table" />
+<media type="file" src="C:\Users\D\mavis-outlier\docs\DFS Projection Model.md" caption="Your model, the source of truth" />
 </deliver-assets>
 
 ## Dave (user)  2026-11-05 19:58:19
@@ -1114,7 +1114,7 @@ Everything's committed (`481defa`), the run is deterministic and reproducible in
 - **Collider:** Alloy, Tandem, Baton, or Kiln — or I work it harder.
 
 <deliver-assets>
-<media type="file" src="C:\Users\D\mavis-fantasy-grinder\docs\mavis-accuracy-history.md" caption="Four-season accuracy history — method, tables, verdict" />
+<media type="file" src="C:\Users\D\mavis-outlier\docs\mavis-accuracy-history.md" caption="Four-season accuracy history — method, tables, verdict" />
 </deliver-assets>
 
 ## Dave (user)  2026-11-06 00:04:16
@@ -1180,7 +1180,7 @@ Cloudflare sign-in tab (right side) — ten seconds, deploys never ask again. Co
 Everything's pushed (`b2f98ad`), CI green on every commit today.
 
 <deliver-assets>
-<media src="C:\Users\D\mavis-fantasy-grinder\docs\brand\mavis-app-dk-seed.png" caption="The app opening loaded: your DK slate, 150 lineups built, real prices" />
+<media src="C:\Users\D\mavis-outlier\docs\brand\mavis-app-dk-seed.png" caption="The app opening loaded: your DK slate, 150 lineups built, real prices" />
 </deliver-assets>
 
 ## Dave (user)  2026-11-06 04:27:25
