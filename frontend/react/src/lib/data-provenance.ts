@@ -62,6 +62,12 @@ export const DATA_FACTS: DataFact[] = [
     provenance: "modelled",
   },
   {
+    label: "The slate itself",
+    source:
+      "Pulled live from DraftKings when the app opens: the contests on the board, the games on them, and DraftKings' own salaries, projections and injury status.",
+    provenance: "draftkings",
+  },
+  {
     label: "Prize pool, field size, entry fee, bankroll",
     source: "You set these in the app",
     provenance: "user-set",
@@ -92,7 +98,15 @@ export const PRICES_MISSING_NOTICE =
  * mistake a sample slate for a live one and enter lineups built from it.
  */
 export const SAMPLE_NOTICE =
-  "Sample roster — the live ESPN feed could not be reached, so this player pool is a bundled sample. Lineups built from it are for demonstration only. Do not enter them.";
+  "No live DraftKings slate is available for this sport right now, so this player pool is a bundled sample with made-up prices. Lineups built from it are for demonstration only. Do not enter them.";
+
+/**
+ * What the app says when the roster on screen is the DraftKings slate that
+ * ships with the app. Its prices are real DraftKings prices, but they
+ * belong to an earlier game week.
+ */
+export const BUNDLED_DK_NOTICE =
+  "These are DraftKings' own published prices and projections from an earlier game week, not the slate on the board now. The live DraftKings slate replaces them as soon as it loads.";
 
 /**
  * What the ROI number is and is not.

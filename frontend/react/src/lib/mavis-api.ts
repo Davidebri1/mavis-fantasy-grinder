@@ -13,6 +13,10 @@ export interface ApiSlate {
   file_name?: string;
   is_active?: boolean;
   player_count?: number;
+  /** Where the slate came from: "draftkings-live" or "sample". */
+  data_source?: string;
+  /** Plain-language notes the API raised about this slate. */
+  warnings?: string[];
 }
 
 const PRODUCTION_DEFAULT_API_URL =
@@ -96,20 +100,33 @@ export async function fetchApiSlates(sport?: Sport): Promise<ApiSlate[]> {
   return Array.isArray(data) ? data : (data.results ?? []);
 }
 
+export interface ApiPlayersPayload {
+  players: Player[];
+  /** Plain-language notes about the roster that was returned. */
+  warnings: string[];
+  /** "draftkings-live" | "sample" | null when the API does not say. */
+  dataSource: string | null;
+}
+
 export async function fetchApiPlayers(
   sport: Sport,
   slateId?: string | number,
-): Promise<Player[]> {
+): Promise<ApiPlayersPayload> {
   const params = new URLSearchParams({ sport });
   if (slateId !== undefined && slateId !== "") {
     params.set("slate_id", String(slateId));
   }
-  const data = await apiRequest<Player[] | { results?: Player[] }>(
-    `/players/?${params.toString()}`,
-    { method: "GET" },
-    15_000,
-  );
-  return Array.isArray(data) ? data : (data.results ?? []);
+  const data = await apiRequest<
+    Player[] | { results?: Player[]; warnings?: string[]; data_source?: string }
+  >(`/players/?${params.toString()}`, { method: "GET" }, 15_000);
+  if (Array.isArray(data)) {
+    return { players: data, warnings: [], dataSource: null };
+  }
+  return {
+    players: data.results ?? [],
+    warnings: data.warnings ?? [],
+    dataSource: data.data_source ?? null,
+  };
 }
 
 export interface ApiOptimizeResponse {

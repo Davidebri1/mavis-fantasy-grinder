@@ -19,6 +19,11 @@ import {
 import { fetchLivePool, type LiveGame } from "@/lib/espn-live";
 import { parseDraftables } from "@/lib/dk-draftables";
 import { fetchApiPlayers, fetchApiSlates } from "@/lib/mavis-api";
+import {
+  dkLiveSupported,
+  fetchLiveDkRoster,
+  type LiveDkSlateInfo,
+} from "@/lib/dk-live";
 import dkShowdownJaxBal from "@/assets/dk-showdown-jax-bal.json";
 import {
   buildGolfSample,
@@ -31,11 +36,11 @@ import {
 import { seedHeadshotCache, prefetchHeadshots } from "@/components/PlayerAvatar";
 
 /**
- * The bundled DraftKings slate — real published prices and DK's own
- * projections. It seeds the NFL pool so the app is usable the moment it
- * opens, before any import. A live ESPN pull or a customer import replaces
- * it; auto-refresh leaves it alone (it would overwrite real prices with
- * estimates).
+ * The bundled DraftKings slate — real published prices and DraftKings own
+ * projections, but from an earlier game week. It is the fallback the app
+ * opens with, and it is labelled "bundled-dk" so it is never mistaken for
+ * the slate on the board. The live DraftKings slate replaces it as soon as
+ * the API answers.
  */
 const DK_SEED_NFL: Player[] = parseDraftables(
   JSON.stringify(dkShowdownJaxBal),
@@ -93,7 +98,7 @@ export type ApiStatus = "idle" | "loading" | "ready" | "error";
  * slate. The UI must say so loudly — a customer who enters a lineup built from
  * sample data has been told a lie by the product.
  */
-export type RosterSource = "live" | "sample" | "imported" | "dk";
+export type RosterSource = "live" | "sample" | "imported" | "dk" | "bundled-dk";
 
 interface AppState {
   // Working set
@@ -112,6 +117,8 @@ interface AppState {
   rosterSource: Record<string, RosterSource>;
   liveGames: Record<string, LiveGame[]>;
   liveWarnings: Record<string, string[]>;
+  /** Which DraftKings board is on screen, and when it was pulled. */
+  liveSlate: Record<string, LiveDkSlateInfo | undefined>;
   lastSyncedAt: Record<string, string | null>;
   /** Pull the live slate from ESPN and swap it into the pool. */
   loadLive: (sport: Sport) => Promise<void>;
@@ -188,9 +195,10 @@ export const useAppStore = create<AppState>()(
       },
 
       liveStatus: {},
-      rosterSource: { nfl: "dk" },
+      rosterSource: { nfl: "bundled-dk" },
       liveGames: {},
       liveWarnings: {},
+      liveSlate: {},
       lastSyncedAt: {},
       apiStatus: {},
       apiError: {},
@@ -200,22 +208,99 @@ export const useAppStore = create<AppState>()(
           apiStatus: { ...s.apiStatus, [sport]: "loading" },
           apiError: { ...s.apiError, [sport]: null },
         }));
+        let browserWarning: string | null = null;
+
+        // The live DraftKings slate, pulled by this browser.
+        //
+        // DraftKings answers a browser request and refuses our datacenter
+        // edge, so the page asks DraftKings for the slate itself and hands
+        // the pool to the optimizer API. Every number in that pool is
+        // DraftKings' own.
+        if (dkLiveSupported(sport)) {
+          try {
+            const live = await fetchLiveDkRoster(sport);
+            if (live.players.length > 0) {
+              set((s) => ({
+                players: { ...s.players, [sport]: live.players },
+                rosterSource: { ...s.rosterSource, [sport]: "dk" as RosterSource },
+                liveWarnings: { ...s.liveWarnings, [sport]: live.warnings },
+                liveGames: { ...s.liveGames, [sport]: gamesFromPlayers(live.players) },
+                liveSlate: { ...s.liveSlate, [sport]: live.slate },
+                lastSyncedAt: { ...s.lastSyncedAt, [sport]: live.slate.fetchedAt },
+                apiStatus: { ...s.apiStatus, [sport]: "ready" },
+                apiError: { ...s.apiError, [sport]: null },
+              }));
+              get().setActiveSlateId(
+                sport,
+                `dk-${sport}-${live.slate.draftGroupId}`,
+              );
+              void prefetchHeadshots(live.players.map((p) => p.name));
+              return true;
+            }
+          } catch (err) {
+            browserWarning =
+              "The live DraftKings slate could not be loaded in this browser: " +
+              (err instanceof Error ? err.message : String(err));
+          }
+        }
+
         try {
           const slates = await fetchApiSlates(sport);
           const preferred = slates.find((sl) => sl.is_active) ?? slates[0];
-          const apiPlayers = await fetchApiPlayers(sport, preferred?.id);
+          const {
+            players: apiPlayers,
+            warnings: apiWarnings,
+            dataSource,
+          } = await fetchApiPlayers(sport, preferred?.id);
           if (preferred?.id !== undefined) {
             get().setActiveSlateId(sport, String(preferred.id));
           }
+          const apiIsLive =
+            (dataSource ?? preferred?.data_source) === "draftkings-live";
+          if (!apiIsLive) {
+            // The API could not reach DraftKings and answered with its
+            // sample. If the roster already on screen carries real
+            // DraftKings prices it stays: a made-up sample is no
+            // improvement, and the banner already says which slate it is.
+            const current = get().rosterSource[sport];
+            if (current === "bundled-dk" || current === "dk") {
+              set((s) => ({
+                liveWarnings: {
+                  ...s.liveWarnings,
+                  [sport]: browserWarning
+                    ? [browserWarning, ...apiWarnings]
+                    : apiWarnings,
+                },
+                apiStatus: { ...s.apiStatus, [sport]: "ready" },
+                apiError: { ...s.apiError, [sport]: null },
+              }));
+              return false;
+            }
+          }
           if (apiPlayers.length > 0) {
+            // A roster is only called a DraftKings slate when the API says
+            // the data came from DraftKings live. Anything else is a sample
+            // and is labelled as one.
+            const isLiveDk =
+              (dataSource ?? preferred?.data_source) === "draftkings-live";
             const withSport = apiPlayers.map((p) => ({
               ...p,
               sport,
-              salary_source: (p.salary > 0 ? "dk" : "none") as Player["salary_source"],
+              salary_source: (p.salary_source ??
+                (isLiveDk && p.salary > 0 ? "dk" : "none")) as Player["salary_source"],
             }));
             set((s) => ({
               players: { ...s.players, [sport]: withSport },
-              rosterSource: { ...s.rosterSource, [sport]: "dk" as RosterSource },
+              rosterSource: {
+                ...s.rosterSource,
+                [sport]: (isLiveDk ? "dk" : "sample") as RosterSource,
+              },
+              liveWarnings: {
+                ...s.liveWarnings,
+                [sport]: browserWarning
+                  ? [browserWarning, ...apiWarnings]
+                  : apiWarnings,
+              },
               liveGames: {
                 ...s.liveGames,
                 [sport]:

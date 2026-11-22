@@ -8,6 +8,12 @@
  * container binding. Never bundled into the frontend client.
  */
 
+import {
+  fetchLiveDkSlate,
+  fetchLiveDkSlateByGroup,
+  parseSlateId,
+} from "./mavis-dk-live.mjs";
+
 const VALID_SPORTS = new Set(["nba", "nfl", "mma", "golf"]);
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -310,6 +316,17 @@ function buildSampleDataset() {
 
 const SAMPLE_DATA = buildSampleDataset();
 
+// The sample rows carry invented prices and projections. They are labelled
+// as sample so no part of the app can pass them off as DraftKings own
+// published numbers, and they carry no ownership figure at all.
+for (const rows of Object.values(SAMPLE_DATA.playersBySport)) {
+  for (const row of rows) {
+    row.salary_source = "sample";
+    row.projection_source = "sample";
+    delete row.projected_ownership;
+  }
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // Optimizer math & constraints
 // ───────────────────────────────────────────────────────────────────────────
@@ -399,6 +416,8 @@ function normalizePlayer(p, sport) {
     is_locked: Boolean(p.is_locked),
     is_excluded: Boolean(p.is_excluded),
     is_liked: Boolean(p.is_liked),
+    injury_status: p.injury_status ?? null,
+    injury_severity: p.injury_severity ?? null,
   };
 }
 
@@ -421,6 +440,12 @@ function filterEligible(players, settings) {
     seen.add(p.id);
     if (p.is_excluded) continue;
     if (p.salary <= 0) continue;
+    // DraftKings contests do not accept a player who is OUT or IR.
+    const status = String(p.injury_status ?? "").toUpperCase();
+    if (status === "OUT" || status === "IR") continue;
+    // A player with no published projection cannot be scored, so they
+    // cannot be part of a lineup.
+    if (effectiveProjection(p) <= 0) continue;
     if (effectiveProjection(p) < minProj) continue;
     if (p.team && excludedTeams.has(p.team)) continue;
     out.push(p);
@@ -1922,19 +1947,52 @@ export async function handleEdgeApiRequest(request, env) {
         400,
       );
     }
-    const baseSlate = SAMPLE_DATA.slates[sport];
-    const liveDate = tomorrowIsoDate();
-    const slate = { ...baseSlate, slate_date: liveDate, created_at: `${liveDate}T00:00:00Z` };
     const notBefore = url.searchParams.get("not_before_date");
-    if (notBefore && slate.slate_date < notBefore) {
-      return jsonResponse(request, env, []);
+
+    // The live DraftKings slate first. If DraftKings cannot be reached,
+    // or has no slate for this sport, the bundled sample is served and it
+    // says so. A sample is never dressed up as a DraftKings slate.
+    try {
+      const live = await fetchLiveDkSlate(sport);
+      if (notBefore && live.slate.slate_date < notBefore) {
+        return jsonResponse(request, env, []);
+      }
+      return jsonResponse(request, env, [live.slate]);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      const baseSlate = SAMPLE_DATA.slates[sport];
+      const liveDate = tomorrowIsoDate();
+      const slate = {
+        ...baseSlate,
+        slate_date: liveDate,
+        created_at: `${liveDate}T00:00:00Z`,
+        data_source: "sample",
+        warnings: [`Live DraftKings slate unavailable: ${reason}`],
+      };
+      if (notBefore && slate.slate_date < notBefore) {
+        return jsonResponse(request, env, []);
+      }
+      return jsonResponse(request, env, [slate]);
     }
-    return jsonResponse(request, env, [slate]);
   }
 
   const slateDetailMatch = path.match(/^\/api\/slates\/([^/]+)\/$/);
   if (request.method === "GET" && slateDetailMatch) {
     const id = decodeURIComponent(slateDetailMatch[1]);
+    const liveId = parseSlateId(id);
+    if (liveId) {
+      try {
+        const live = await fetchLiveDkSlateByGroup(liveId.sport, liveId.draftGroupId);
+        return jsonResponse(request, env, { ...live.slate, players: live.players });
+      } catch (err) {
+        return jsonResponse(
+          request,
+          env,
+          { code: "dk_unavailable", message: err instanceof Error ? err.message : "DraftKings slate unavailable" },
+          503,
+        );
+      }
+    }
     const entry = Object.values(SAMPLE_DATA.slates).find((s) => s.id === id);
     if (!entry) {
       return jsonResponse(request, env, { code: "not_found", message: `Slate ${id} not found` }, 404);
@@ -1952,9 +2010,37 @@ export async function handleEdgeApiRequest(request, env) {
     const slateId = url.searchParams.get("slate_id");
     const sport = url.searchParams.get("sport");
     if (slateId) {
+      const liveId = parseSlateId(slateId);
+      if (liveId) {
+        try {
+          const live = await fetchLiveDkSlateByGroup(liveId.sport, liveId.draftGroupId);
+          return jsonResponse(request, env, {
+            results: live.players,
+            warnings: live.warnings,
+            data_source: "draftkings-live",
+          });
+        } catch (err) {
+          return jsonResponse(
+            request,
+            env,
+            {
+              results: [],
+              warnings: [
+                `DraftKings live slate unavailable: ${err instanceof Error ? err.message : "unknown error"}`,
+              ],
+              data_source: "error",
+            },
+            503,
+          );
+        }
+      }
       const entry = Object.values(SAMPLE_DATA.slates).find((s) => s.id === slateId);
       if (!entry) return jsonResponse(request, env, { code: "not_found" }, 404);
-      return jsonResponse(request, env, SAMPLE_DATA.playersBySport[entry.sport] ?? []);
+      return jsonResponse(request, env, {
+        results: SAMPLE_DATA.playersBySport[entry.sport] ?? [],
+        warnings: ["This is the bundled sample roster, not a live DraftKings slate."],
+        data_source: "sample",
+      });
     }
     if (!VALID_SPORTS.has(sport)) {
       return jsonResponse(
@@ -1964,7 +2050,11 @@ export async function handleEdgeApiRequest(request, env) {
         400,
       );
     }
-    return jsonResponse(request, env, SAMPLE_DATA.playersBySport[sport] ?? []);
+    return jsonResponse(request, env, {
+      results: SAMPLE_DATA.playersBySport[sport] ?? [],
+      warnings: ["This is the bundled sample roster, not a live DraftKings slate."],
+      data_source: "sample",
+    });
   }
 
   if (request.method === "POST" && path === "/api/optimize/") {

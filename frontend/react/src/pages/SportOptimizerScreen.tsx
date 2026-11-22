@@ -21,6 +21,7 @@ import {
   EstimateNotice,
   PricesMissingBanner,
   SampleDataBanner,
+  BundledSlateBanner,
 } from "@/components/DataDisclosure";
 import { ExposureReport, computeExposure } from "@/components/ExposureReport";
 import { ImportDialog } from "@/components/ImportDialog";
@@ -42,6 +43,7 @@ import {
 
 import { useAppStore } from "@/store";
 import { runOptimizerAsync } from "@/lib/run-optimizer";
+import { dkLiveSupported } from "@/lib/dk-live";
 import {
   exportLineupsCsv,
   exportLineupsXlsx,
@@ -101,6 +103,7 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
   const liveStatus = useAppStore((s) => s.liveStatus[sport] ?? "idle");
   const liveGames = useAppStore((s) => s.liveGames[sport] ?? []);
   const liveWarnings = useAppStore((s) => s.liveWarnings[sport] ?? []);
+  const liveSlate = useAppStore((s) => s.liveSlate[sport]);
   const lastSyncedAt = useAppStore((s) => s.lastSyncedAt[sport] ?? null);
   const rosterSource = useAppStore((s) => s.rosterSource[sport] ?? "live");
   const lastResult = useAppStore((s) => s.lastResult);
@@ -130,7 +133,13 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
     const timer = setInterval(() => {
       if (cancelled) return;
       const src = useAppStore.getState().rosterSource[sport];
-      if (src === "imported" || src === "dk") return;
+      if (src === "imported") return;
+      // A live DraftKings slate is refreshed from DraftKings. The ESPN feed
+      // never replaces it: that would overwrite real prices with estimates.
+      if (src === "dk") {
+        void loadFromApi(sport);
+        return;
+      }
       void loadLive(sport);
     }, 5 * 60 * 1000);
     return () => {
@@ -334,24 +343,31 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
           .join(" · ")
       : `${players.length} players`;
 
+  const dkBoardLabel =
+    liveSlate && liveSlate.board !== "Main"
+      ? `${liveSlate.board} board`
+      : "main board";
+
   const statusLine =
     rosterSource === "dk"
-      ? `DraftKings slate loaded · ${slateLabel} · real salaries & projections — Refresh pulls ESPN live`
-      : rosterSource === "imported"
-      ? `Imported roster · ${players.length} players — your file's salaries are in use; background refresh paused`
-      : liveStatus === "live"
-      ? `Live from ESPN · ${players.length} players · ${liveGames.length} ${
-          liveGames.length === 1 ? "game" : "games"
-        }`
-      : liveStatus === "loading"
-        ? "Pulling the live slate"
-        : liveStatus === "offline"
-          ? rosterSource === "sample"
-            ? "Live feed unreachable — showing the bundled sample roster"
-            : "Live feed unreachable — using the roster already loaded"
-          : liveStatus === "empty"
-            ? "No live slate on the board right now"
-            : "Waiting for the slate";
+      ? `Live DraftKings slate · ${dkBoardLabel} · ${slateLabel} · real DraftKings salaries & projections`
+      : rosterSource === "bundled-dk"
+        ? `Bundled DraftKings slate (JAX @ BAL · Nov 5) · not today's slate — loading the live DraftKings slate`
+        : rosterSource === "imported"
+          ? `Imported roster · ${players.length} players — your file's salaries are in use; background refresh paused`
+          : rosterSource === "sample"
+            ? `Sample roster · no live DraftKings slate for ${sport.toUpperCase()} right now`
+            : liveStatus === "live"
+              ? `Live from ESPN · ${players.length} players · ${liveGames.length} ${
+                  liveGames.length === 1 ? "game" : "games"
+                }`
+              : liveStatus === "loading"
+                ? "Pulling the live slate"
+                : liveStatus === "offline"
+                  ? "Live feed unreachable — using the roster already loaded"
+                  : liveStatus === "empty"
+                    ? "No live slate on the board right now"
+                    : "Waiting for the slate";
 
   const syncedLabel = lastSyncedAt
     ? new Date(lastSyncedAt).toLocaleTimeString(undefined, {
@@ -418,12 +434,22 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => void loadLive(sport)}
-              disabled={liveStatus === "loading"}
+              onClick={() =>
+                void (rosterSource === "dk" ? loadFromApi(sport) : loadLive(sport))
+              }
+              disabled={
+                liveStatus === "loading" ||
+                (rosterSource === "dk" && apiStatus === "loading")
+              }
               className="inline-flex items-center gap-1.5 px-3 h-9 text-sm font-medium rounded-2 text-ink-on-dark border border-white/25 bg-white/10 backdrop-blur-sm transition-colors hover:bg-white/18 hover:border-white/40 disabled:opacity-50"
             >
               <RefreshCw
-                className={cn("w-4 h-4", liveStatus === "loading" && "animate-spin")}
+                className={cn(
+                  "w-4 h-4",
+                  (liveStatus === "loading" ||
+                    (rosterSource === "dk" && apiStatus === "loading")) &&
+                    "animate-spin",
+                )}
               />
               Refresh
             </button>
@@ -474,6 +500,7 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
       <div className="h-px bg-line" />
 
       {rosterSource === "sample" && <SampleDataBanner />}
+      {rosterSource === "bundled-dk" && <BundledSlateBanner />}
 
       {!hasRealPrices && <PricesMissingBanner />}
 
@@ -487,10 +514,24 @@ export function SportOptimizerScreen({ sport }: { sport: Sport }) {
         </ul>
       )}
 
-      <EstimateNotice mode={rosterSource === "dk" || rosterSource === "imported" ? "dk" : "estimate"} />
+      <EstimateNotice
+        mode={
+          rosterSource === "dk" || rosterSource === "imported"
+            ? "dk"
+            : rosterSource === "bundled-dk"
+              ? "dk-stale"
+              : rosterSource === "sample"
+                ? "sample"
+                : "estimate"
+        }
+      />
 
       {apiStatus === "loading" && (
-        <p className="well p-3 label text-ink-muted">Connecting to optimizer backend…</p>
+        <p className="well p-3 label text-ink-muted">
+          {dkLiveSupported(sport)
+            ? "Pulling the live DraftKings slate…"
+            : "Connecting to optimizer backend…"}
+        </p>
       )}
       {apiError && (
         <p className="well p-3 label text-warn">

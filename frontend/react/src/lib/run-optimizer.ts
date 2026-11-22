@@ -19,7 +19,13 @@ function mapPlayersForApi(players: Player[]): Record<string, unknown>[] {
     id: p.id,
     name: p.name,
     salary: salaryIsReal(p) ? p.salary : 0,
-    projection: p.projection,
+    // Only a published DraftKings projection (or the customer's own) is a
+    // projection. A modelled or missing number is sent as zero so it can
+    // never be scored.
+    projection:
+      p.user_projection != null || p.projection_source === "dk"
+        ? p.projection
+        : 0,
     user_projection: p.user_projection ?? null,
     team: p.team ?? "",
     opponent: p.opponent ?? "",

@@ -15,6 +15,10 @@ export function projectionSourceText(p: Player): string {
   switch (p.projection_source) {
     case "dk":
       return "DraftKings projection";
+    case "dk-pending":
+      return "Not published by DraftKings";
+    case "sample":
+      return "Sample value (not a real projection)";
     case "rotowire":
       return "Rotowire projection";
     case "mine":
