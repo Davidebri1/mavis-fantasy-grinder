@@ -1,0 +1,850 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1552" height="826" viewBox="0 0 1552 826" font-family="Inter, Helvetica, Arial, sans-serif">
+<rect width="1552" height="826" fill="#FFFFFF"/>
+<text x="16" y="30" font-size="18" font-weight="600" fill="#14161E">Each player is his own population</text>
+<text x="16" y="49" font-size="12" fill="#6B7280">Own DraftKings fantasy points, his own humps, his own thresholds. Red marks a threshold between clusters; blue marks the high cluster. The 24 of 33 players whose own distribution splits under his rule (median/mode + kurtosis 3), most games first.</text>
+<text x="16" y="65" font-size="11" fill="#6B7280">30 of the 33 have clusters that each pass the normality test and are therefore usable categories; the rest are marked WRONG FACTOR.</text>
+<g>
+<rect x="16" y="74" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="188.25" y="74" width="61.75" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="22.50" y="179.00" width="3.75" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="27.25" y="153.00" width="3.75" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="32.00" y="153.00" width="3.75" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="36.75" y="101.00" width="3.75" height="91.00" fill="#14161E" opacity="0.55"/>
+<rect x="41.50" y="153.00" width="3.75" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="46.25" y="166.00" width="3.75" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="51.00" y="140.00" width="3.75" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="55.75" y="140.00" width="3.75" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="60.50" y="114.00" width="3.75" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="65.25" y="88.00" width="3.75" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="70.00" y="140.00" width="3.75" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="74.75" y="153.00" width="3.75" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="79.50" y="127.00" width="3.75" height="65.00" fill="#14161E" opacity="0.55"/>
+<rect x="84.25" y="166.00" width="3.75" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="89.00" y="127.00" width="3.75" height="65.00" fill="#14161E" opacity="0.55"/>
+<rect x="98.50" y="101.00" width="3.75" height="91.00" fill="#14161E" opacity="0.55"/>
+<rect x="103.25" y="153.00" width="3.75" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="108.00" y="166.00" width="3.75" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="112.75" y="101.00" width="3.75" height="91.00" fill="#14161E" opacity="0.55"/>
+<rect x="117.50" y="153.00" width="3.75" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="122.25" y="101.00" width="3.75" height="91.00" fill="#14161E" opacity="0.55"/>
+<rect x="127.00" y="166.00" width="3.75" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="131.75" y="127.00" width="3.75" height="65.00" fill="#14161E" opacity="0.55"/>
+<rect x="136.50" y="153.00" width="3.75" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="141.25" y="179.00" width="3.75" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="146.00" y="153.00" width="3.75" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="150.75" y="179.00" width="3.75" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="160.25" y="179.00" width="3.75" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="165.00" y="166.00" width="3.75" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="169.75" y="166.00" width="3.75" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="174.50" y="179.00" width="3.75" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="179.25" y="166.00" width="3.75" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="184.00" y="179.00" width="3.75" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="193.50" y="166.00" width="3.75" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="198.25" y="153.00" width="3.75" height="39.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="203.00" y="179.00" width="3.75" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="212.50" y="179.00" width="3.75" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="217.25" y="179.00" width="3.75" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="231.50" y="179.00" width="3.75" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="236.25" y="179.00" width="3.75" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="241.00" y="179.00" width="3.75" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="245.75" y="179.00" width="3.75" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<line x1="157.38" y1="74" x2="157.38" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="190.63" y1="74" x2="190.63" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="26" y="90" font-size="11" font-weight="600" fill="#14161E">Davante Adams</text>
+<text x="26" y="103" font-size="9.5" fill="#6B7280">WR/TE - 125 games - median 16.3 - mode 9.5 - kurtosis 2.8324</text>
+<text x="26" y="115" font-size="9.5" fill="#6B7280">thresholds 28.5, 35.5 - clusters 3</text>
+<text x="26" y="205" font-size="9.5" fill="#C0392B" font-weight="700">WRONG FACTOR - NOT USABLE</text>
+<text x="26" y="217" font-size="9.5" fill="#6B7280">model 83% of his own cluster - his no-skill rate 83%</text>
+</g>
+<g>
+<rect x="272" y="74" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="431.55" y="74" width="74.45" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="278.50" y="179.00" width="3.65" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="292.46" y="140.00" width="3.65" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="297.11" y="127.00" width="3.65" height="65.00" fill="#14161E" opacity="0.55"/>
+<rect x="301.77" y="140.00" width="3.65" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="306.42" y="88.00" width="3.65" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="311.07" y="114.00" width="3.65" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="315.72" y="140.00" width="3.65" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="320.38" y="88.00" width="3.65" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="325.03" y="179.00" width="3.65" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="329.68" y="166.00" width="3.65" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="334.34" y="88.00" width="3.65" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="338.99" y="127.00" width="3.65" height="65.00" fill="#14161E" opacity="0.55"/>
+<rect x="343.64" y="153.00" width="3.65" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="348.30" y="114.00" width="3.65" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="352.95" y="153.00" width="3.65" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="357.60" y="140.00" width="3.65" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="366.91" y="101.00" width="3.65" height="91.00" fill="#14161E" opacity="0.55"/>
+<rect x="371.56" y="166.00" width="3.65" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="376.21" y="166.00" width="3.65" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="380.87" y="166.00" width="3.65" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="385.52" y="166.00" width="3.65" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="390.17" y="140.00" width="3.65" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="394.83" y="127.00" width="3.65" height="65.00" fill="#14161E" opacity="0.55"/>
+<rect x="399.48" y="153.00" width="3.65" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="418.09" y="166.00" width="3.65" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="422.74" y="140.00" width="3.65" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="432.05" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="436.70" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="441.36" y="166.00" width="3.65" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="446.01" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="450.66" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="455.32" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="459.97" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="464.62" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="469.28" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="483.23" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="501.85" y="179.00" width="3.65" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<line x1="378.04" y1="74" x2="378.04" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="410.61" y1="74" x2="410.61" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="433.88" y1="74" x2="433.88" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="282" y="90" font-size="11" font-weight="600" fill="#14161E">Jordy Nelson</text>
+<text x="282" y="103" font-size="9.5" fill="#6B7280">WR/TE - 117 games - median 12.6 - mode 4.5 - kurtosis 2.9499</text>
+<text x="282" y="115" font-size="9.5" fill="#6B7280">thresholds 19.5, 26.5, 31.5 - clusters 4</text>
+<text x="282" y="205" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="282" y="217" font-size="9.5" fill="#6B7280">model 55% of his own cluster - his no-skill rate 70%</text>
+</g>
+<g>
+<rect x="528" y="74" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="732.58" y="74" width="29.42" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="534.50" y="157.33" width="6.35" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="541.85" y="88.00" width="6.35" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="549.21" y="88.00" width="6.35" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="556.56" y="140.00" width="6.35" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="563.92" y="88.00" width="6.35" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="571.27" y="140.00" width="6.35" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="578.63" y="140.00" width="6.35" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="585.98" y="122.67" width="6.35" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="593.34" y="140.00" width="6.35" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="600.69" y="105.33" width="6.35" height="86.67" fill="#14161E" opacity="0.55"/>
+<rect x="608.05" y="88.00" width="6.35" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="615.40" y="140.00" width="6.35" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="622.76" y="157.33" width="6.35" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="630.11" y="88.00" width="6.35" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="637.47" y="122.67" width="6.35" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="644.82" y="157.33" width="6.35" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="652.18" y="174.67" width="6.35" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="659.53" y="140.00" width="6.35" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="666.89" y="122.67" width="6.35" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="681.60" y="140.00" width="6.35" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="688.95" y="157.33" width="6.35" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="696.31" y="174.67" width="6.35" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="703.66" y="174.67" width="6.35" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="718.37" y="157.33" width="6.35" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="725.73" y="174.67" width="6.35" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="740.44" y="174.67" width="6.35" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="747.79" y="140.00" width="6.35" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="755.15" y="174.67" width="6.35" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<line x1="736.26" y1="74" x2="736.26" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="538" y="90" font-size="11" font-weight="600" fill="#14161E">James Jones</text>
+<text x="538" y="103" font-size="9.5" fill="#6B7280">WR/TE - 87 games - median 10.5 - mode 2.5 - kurtosis 2.6102</text>
+<text x="538" y="115" font-size="9.5" fill="#6B7280">thresholds 27.5 - clusters 2</text>
+<text x="538" y="205" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="538" y="217" font-size="9.5" fill="#6B7280">model 94% of his own cluster - his no-skill rate 94%</text>
+</g>
+<g>
+<rect x="784" y="74" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="895.23" y="74" width="122.77" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="790.50" y="179.00" width="4.85" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="796.35" y="114.00" width="4.85" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="802.19" y="153.00" width="4.85" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="808.04" y="153.00" width="4.85" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="813.88" y="88.00" width="4.85" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="819.73" y="153.00" width="4.85" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="825.58" y="140.00" width="4.85" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="831.42" y="153.00" width="4.85" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="837.27" y="166.00" width="4.85" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="843.12" y="166.00" width="4.85" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="848.96" y="166.00" width="4.85" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="854.81" y="179.00" width="4.85" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="860.65" y="140.00" width="4.85" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="866.50" y="140.00" width="4.85" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="872.35" y="127.00" width="4.85" height="65.00" fill="#14161E" opacity="0.55"/>
+<rect x="878.19" y="127.00" width="4.85" height="65.00" fill="#14161E" opacity="0.55"/>
+<rect x="884.04" y="153.00" width="4.85" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="889.88" y="166.00" width="4.85" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="901.58" y="166.00" width="4.85" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="907.42" y="166.00" width="4.85" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="913.27" y="153.00" width="4.85" height="39.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="919.12" y="140.00" width="4.85" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="924.96" y="179.00" width="4.85" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="930.81" y="179.00" width="4.85" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="936.65" y="166.00" width="4.85" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="948.35" y="166.00" width="4.85" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="965.88" y="179.00" width="4.85" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1012.65" y="179.00" width="4.85" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<line x1="851.38" y1="74" x2="851.38" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="898.15" y1="74" x2="898.15" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="794" y="90" font-size="11" font-weight="600" fill="#14161E">Rhamondre Stevenson</text>
+<text x="794" y="103" font-size="9.5" fill="#6B7280">RB - 80 games - median 12.75 - mode 4.6 - kurtosis 2.8021</text>
+<text x="794" y="115" font-size="9.5" fill="#6B7280">thresholds 10.6, 18.6 - clusters 3</text>
+<text x="794" y="205" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="794" y="217" font-size="9.5" fill="#6B7280">model 22% of his own cluster - his no-skill rate 44%</text>
+</g>
+<g>
+<rect x="1040" y="74" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="1194.20" y="74" width="79.80" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="1046.50" y="147.43" width="4.70" height="44.57" fill="#14161E" opacity="0.55"/>
+<rect x="1052.20" y="102.86" width="4.70" height="89.14" fill="#14161E" opacity="0.55"/>
+<rect x="1057.90" y="132.57" width="4.70" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="1063.60" y="88.00" width="4.70" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="1069.30" y="162.29" width="4.70" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="1075.00" y="117.71" width="4.70" height="74.29" fill="#14161E" opacity="0.55"/>
+<rect x="1080.70" y="162.29" width="4.70" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="1086.40" y="162.29" width="4.70" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="1092.10" y="177.14" width="4.70" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="1097.80" y="132.57" width="4.70" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="1103.50" y="132.57" width="4.70" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="1109.20" y="177.14" width="4.70" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="1120.60" y="117.71" width="4.70" height="74.29" fill="#14161E" opacity="0.55"/>
+<rect x="1126.30" y="177.14" width="4.70" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="1132.00" y="177.14" width="4.70" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="1137.70" y="132.57" width="4.70" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="1143.40" y="177.14" width="4.70" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="1149.10" y="162.29" width="4.70" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="1154.80" y="162.29" width="4.70" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="1160.50" y="162.29" width="4.70" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="1166.20" y="162.29" width="4.70" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="1171.90" y="132.57" width="4.70" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="1183.30" y="147.43" width="4.70" height="44.57" fill="#14161E" opacity="0.55"/>
+<rect x="1217.50" y="147.43" width="4.70" height="44.57" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1223.20" y="177.14" width="4.70" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1228.90" y="177.14" width="4.70" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1240.30" y="177.14" width="4.70" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1268.80" y="177.14" width="4.70" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<line x1="1197.05" y1="74" x2="1197.05" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="1050" y="90" font-size="11" font-weight="600" fill="#14161E">Willie Parker</text>
+<text x="1050" y="103" font-size="9.5" fill="#6B7280">RB - 75 games - median 10.1 - mode 2.4 - kurtosis 2.6914</text>
+<text x="1050" y="115" font-size="9.5" fill="#6B7280">thresholds 26.4 - clusters 2</text>
+<text x="1050" y="205" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="1050" y="217" font-size="9.5" fill="#6B7280">model 90% of his own cluster - his no-skill rate 91%</text>
+</g>
+<g>
+<rect x="1296" y="74" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="1321.00" y="74" width="209.00" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="1302.50" y="88.00" width="5.33" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="1308.83" y="171.20" width="5.33" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="1315.17" y="181.60" width="5.33" height="10.40" fill="#14161E" opacity="0.55"/>
+<rect x="1321.50" y="181.60" width="5.33" height="10.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1334.17" y="171.20" width="5.33" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1346.83" y="171.20" width="5.33" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1353.17" y="181.60" width="5.33" height="10.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1359.50" y="171.20" width="5.33" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1365.83" y="150.40" width="5.33" height="41.60" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1372.17" y="171.20" width="5.33" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1378.50" y="129.60" width="5.33" height="62.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1384.83" y="160.80" width="5.33" height="31.20" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1391.17" y="150.40" width="5.33" height="41.60" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1397.50" y="171.20" width="5.33" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1403.83" y="160.80" width="5.33" height="31.20" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1410.17" y="150.40" width="5.33" height="41.60" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1416.50" y="129.60" width="5.33" height="62.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1422.83" y="140.00" width="5.33" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1429.17" y="171.20" width="5.33" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1435.50" y="171.20" width="5.33" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1441.83" y="181.60" width="5.33" height="10.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1448.17" y="150.40" width="5.33" height="41.60" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1454.50" y="181.60" width="5.33" height="10.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1460.83" y="181.60" width="5.33" height="10.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1479.83" y="181.60" width="5.33" height="10.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1505.17" y="171.20" width="5.33" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1524.17" y="181.60" width="5.33" height="10.40" fill="#1C6FD0" opacity="0.85"/>
+<line x1="1324.17" y1="74" x2="1324.17" y2="192" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="1306" y="90" font-size="11" font-weight="600" fill="#14161E">Jimmy Garoppolo</text>
+<text x="1306" y="103" font-size="9.5" fill="#6B7280">QB - 75 games - median 13.86 - mode 0.1 - kurtosis 2.6332</text>
+<text x="1306" y="115" font-size="9.5" fill="#6B7280">thresholds 3.1 - clusters 2</text>
+<text x="1306" y="205" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="1306" y="217" font-size="9.5" fill="#6B7280">model 87% of his own cluster - his no-skill rate 81%</text>
+</g>
+<g>
+<rect x="16" y="248" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="119.71" y="248" width="130.29" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="22.50" y="321.43" width="5.51" height="44.57" fill="#14161E" opacity="0.55"/>
+<rect x="35.53" y="291.71" width="5.51" height="74.29" fill="#14161E" opacity="0.55"/>
+<rect x="42.04" y="306.57" width="5.51" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="48.56" y="351.14" width="5.51" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="55.07" y="291.71" width="5.51" height="74.29" fill="#14161E" opacity="0.55"/>
+<rect x="61.59" y="306.57" width="5.51" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="68.10" y="336.29" width="5.51" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="74.61" y="306.57" width="5.51" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="81.13" y="321.43" width="5.51" height="44.57" fill="#14161E" opacity="0.55"/>
+<rect x="87.64" y="336.29" width="5.51" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="94.16" y="291.71" width="5.51" height="74.29" fill="#14161E" opacity="0.55"/>
+<rect x="100.67" y="291.71" width="5.51" height="74.29" fill="#14161E" opacity="0.55"/>
+<rect x="107.19" y="351.14" width="5.51" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="113.70" y="336.29" width="5.51" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="133.24" y="336.29" width="5.51" height="29.71" fill="#1C6FD0" opacity="0.85"/>
+<rect x="139.76" y="262.00" width="5.51" height="104.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="146.27" y="321.43" width="5.51" height="44.57" fill="#1C6FD0" opacity="0.85"/>
+<rect x="152.79" y="351.14" width="5.51" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="159.30" y="351.14" width="5.51" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="165.81" y="351.14" width="5.51" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="172.33" y="351.14" width="5.51" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="178.84" y="351.14" width="5.51" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="185.36" y="351.14" width="5.51" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="191.87" y="351.14" width="5.51" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="204.90" y="336.29" width="5.51" height="29.71" fill="#1C6FD0" opacity="0.85"/>
+<rect x="243.99" y="351.14" width="5.51" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<line x1="122.97" y1="248" x2="122.97" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="26" y="264" font-size="11" font-weight="600" fill="#14161E">Brandon Aiyuk</text>
+<text x="26" y="277" font-size="9.5" fill="#6B7280">WR/TE - 68 games - median 12.95 - mode 20.1 - kurtosis 2.6754</text>
+<text x="26" y="289" font-size="9.5" fill="#6B7280">thresholds 17.1 - clusters 2</text>
+<text x="26" y="379" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="26" y="391" font-size="9.5" fill="#6B7280">model 38% of his own cluster - his no-skill rate 68%</text>
+</g>
+<g>
+<rect x="272" y="248" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="406.25" y="248" width="99.75" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="278.50" y="348.67" width="6.13" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="285.63" y="279.33" width="6.13" height="86.67" fill="#14161E" opacity="0.55"/>
+<rect x="292.75" y="296.67" width="6.13" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="299.88" y="296.67" width="6.13" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="307.00" y="331.33" width="6.13" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="314.13" y="331.33" width="6.13" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="321.25" y="331.33" width="6.13" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="328.38" y="331.33" width="6.13" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="335.50" y="314.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="342.63" y="279.33" width="6.13" height="86.67" fill="#14161E" opacity="0.55"/>
+<rect x="349.75" y="331.33" width="6.13" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="356.88" y="296.67" width="6.13" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="364.00" y="331.33" width="6.13" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="371.13" y="262.00" width="6.13" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="378.25" y="348.67" width="6.13" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="385.38" y="348.67" width="6.13" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="392.50" y="331.33" width="6.13" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="399.63" y="348.67" width="6.13" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="413.88" y="348.67" width="6.13" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="421.00" y="348.67" width="6.13" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="428.13" y="331.33" width="6.13" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="435.25" y="314.00" width="6.13" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="449.50" y="314.00" width="6.13" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="456.63" y="348.67" width="6.13" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="470.88" y="331.33" width="6.13" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="478.00" y="348.67" width="6.13" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="499.38" y="348.67" width="6.13" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<line x1="409.81" y1="248" x2="409.81" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="282" y="264" font-size="11" font-weight="600" fill="#14161E">Ryan Grant</text>
+<text x="282" y="277" font-size="9.5" fill="#6B7280">RB - 64 games - median 11.25 - mode 2.7 - kurtosis 2.2575</text>
+<text x="282" y="289" font-size="9.5" fill="#6B7280">thresholds 18.7 - clusters 2</text>
+<text x="282" y="379" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="282" y="391" font-size="9.5" fill="#6B7280">model 38% of his own cluster - his no-skill rate 77%</text>
+</g>
+<g>
+<rect x="528" y="248" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="637.14" y="248" width="124.86" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="534.50" y="314.00" width="4.43" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="539.93" y="262.00" width="4.43" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="545.36" y="340.00" width="4.43" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="550.79" y="327.00" width="4.43" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="567.07" y="327.00" width="4.43" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="572.50" y="340.00" width="4.43" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="577.93" y="353.00" width="4.43" height="13.00" fill="#14161E" opacity="0.55"/>
+<rect x="588.79" y="327.00" width="4.43" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="594.21" y="327.00" width="4.43" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="599.64" y="327.00" width="4.43" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="605.07" y="340.00" width="4.43" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="610.50" y="301.00" width="4.43" height="65.00" fill="#14161E" opacity="0.55"/>
+<rect x="615.93" y="340.00" width="4.43" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="626.79" y="327.00" width="4.43" height="39.00" fill="#14161E" opacity="0.55"/>
+<rect x="643.07" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="653.93" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="659.36" y="340.00" width="4.43" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="670.21" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="675.64" y="340.00" width="4.43" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="681.07" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="697.36" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="702.79" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="708.21" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="713.64" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="735.36" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="740.79" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="751.64" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="757.07" y="353.00" width="4.43" height="13.00" fill="#1C6FD0" opacity="0.85"/>
+<line x1="558.43" y1="248" x2="558.43" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="580.14" y1="248" x2="580.14" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="639.86" y1="248" x2="639.86" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="538" y="264" font-size="11" font-weight="600" fill="#14161E">James Conner</text>
+<text x="538" y="277" font-size="9.5" fill="#6B7280">RB - 60 games - median 12.45 - mode 1.6 - kurtosis 2.6324</text>
+<text x="538" y="289" font-size="9.5" fill="#6B7280">thresholds 4.6, 8.6, 19.6 - clusters 4</text>
+<text x="538" y="379" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="538" y="391" font-size="9.5" fill="#6B7280">model 34% of his own cluster - his no-skill rate 37%</text>
+</g>
+<g>
+<rect x="784" y="248" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="952.86" y="248" width="65.14" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="790.50" y="324.40" width="4.43" height="41.60" fill="#14161E" opacity="0.55"/>
+<rect x="795.93" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="806.79" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="817.64" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="823.07" y="324.40" width="4.43" height="41.60" fill="#14161E" opacity="0.55"/>
+<rect x="833.93" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="844.79" y="324.40" width="4.43" height="41.60" fill="#14161E" opacity="0.55"/>
+<rect x="850.21" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="866.50" y="303.60" width="4.43" height="62.40" fill="#14161E" opacity="0.55"/>
+<rect x="871.93" y="282.80" width="4.43" height="83.20" fill="#14161E" opacity="0.55"/>
+<rect x="877.36" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="882.79" y="262.00" width="4.43" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="888.21" y="324.40" width="4.43" height="41.60" fill="#14161E" opacity="0.55"/>
+<rect x="893.64" y="262.00" width="4.43" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="899.07" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="904.50" y="303.60" width="4.43" height="62.40" fill="#14161E" opacity="0.55"/>
+<rect x="909.93" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="915.36" y="324.40" width="4.43" height="41.60" fill="#14161E" opacity="0.55"/>
+<rect x="920.79" y="324.40" width="4.43" height="41.60" fill="#14161E" opacity="0.55"/>
+<rect x="926.21" y="282.80" width="4.43" height="83.20" fill="#14161E" opacity="0.55"/>
+<rect x="931.64" y="262.00" width="4.43" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="937.07" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="942.50" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="947.93" y="345.20" width="4.43" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="958.79" y="345.20" width="4.43" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="964.21" y="303.60" width="4.43" height="62.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="980.50" y="345.20" width="4.43" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1013.07" y="345.20" width="4.43" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<line x1="803.57" y1="248" x2="803.57" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="836.14" y1="248" x2="836.14" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="857.86" y1="248" x2="857.86" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="912.14" y1="248" x2="912.14" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="955.57" y1="248" x2="955.57" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="794" y="264" font-size="11" font-weight="600" fill="#14161E">Brock Purdy</text>
+<text x="794" y="277" font-size="9.5" fill="#6B7280">RB - 58 games - median 19.49 - mode 25.4 - kurtosis 2.906</text>
+<text x="794" y="289" font-size="9.5" fill="#6B7280">thresholds 2.4, 8.4, 12.4, 22.4, 30.4 - clusters 6</text>
+<text x="794" y="379" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="794" y="391" font-size="9.5" fill="#6B7280">model 26% of his own cluster - his no-skill rate 43%</text>
+</g>
+<g>
+<rect x="1040" y="248" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="1160.00" y="248" width="114.00" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="1046.50" y="321.43" width="7.14" height="44.57" fill="#14161E" opacity="0.55"/>
+<rect x="1054.64" y="306.57" width="7.14" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="1062.79" y="262.00" width="7.14" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="1070.93" y="321.43" width="7.14" height="44.57" fill="#14161E" opacity="0.55"/>
+<rect x="1079.07" y="351.14" width="7.14" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="1087.21" y="291.71" width="7.14" height="74.29" fill="#14161E" opacity="0.55"/>
+<rect x="1095.36" y="351.14" width="7.14" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="1103.50" y="306.57" width="7.14" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="1111.64" y="351.14" width="7.14" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="1119.79" y="291.71" width="7.14" height="74.29" fill="#14161E" opacity="0.55"/>
+<rect x="1127.93" y="321.43" width="7.14" height="44.57" fill="#14161E" opacity="0.55"/>
+<rect x="1136.07" y="351.14" width="7.14" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="1144.21" y="306.57" width="7.14" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="1160.50" y="351.14" width="7.14" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1168.64" y="336.29" width="7.14" height="29.71" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1176.79" y="336.29" width="7.14" height="29.71" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1184.93" y="336.29" width="7.14" height="29.71" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1201.21" y="336.29" width="7.14" height="29.71" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1209.36" y="351.14" width="7.14" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1225.64" y="351.14" width="7.14" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1250.07" y="351.14" width="7.14" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1266.36" y="351.14" width="7.14" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<line x1="1164.07" y1="248" x2="1164.07" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="1050" y="264" font-size="11" font-weight="600" fill="#14161E">Allen Lazard</text>
+<text x="1050" y="277" font-size="9.5" fill="#6B7280">WR/TE - 55 games - median 9.5 - mode 4.1 - kurtosis 2.8983</text>
+<text x="1050" y="289" font-size="9.5" fill="#6B7280">thresholds 16.1 - clusters 2</text>
+<text x="1050" y="379" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="1050" y="391" font-size="9.5" fill="#6B7280">model 63% of his own cluster - his no-skill rate 76%</text>
+</g>
+<g>
+<rect x="1296" y="248" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="1325.59" y="248" width="204.41" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="1302.50" y="262.00" width="6.86" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="1310.36" y="331.33" width="6.86" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="1318.22" y="348.67" width="6.86" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="1333.95" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1341.81" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1349.67" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1357.53" y="314.00" width="6.86" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1365.40" y="314.00" width="6.86" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1373.26" y="331.33" width="6.86" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1381.12" y="331.33" width="6.86" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1388.98" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1396.84" y="296.67" width="6.86" height="69.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1404.71" y="296.67" width="6.86" height="69.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1412.57" y="331.33" width="6.86" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1420.43" y="314.00" width="6.86" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1428.29" y="331.33" width="6.86" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1436.16" y="314.00" width="6.86" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1444.02" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1451.88" y="331.33" width="6.86" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1459.74" y="331.33" width="6.86" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1475.47" y="331.33" width="6.86" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1483.33" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1491.19" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1499.05" y="331.33" width="6.86" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1506.91" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1514.78" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1522.64" y="348.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<line x1="1329.52" y1="248" x2="1329.52" y2="366" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="1306" y="264" font-size="11" font-weight="600" fill="#14161E">Mac Jones</text>
+<text x="1306" y="277" font-size="9.5" fill="#6B7280">QB - 55 games - median 12.84 - mode 0.2 - kurtosis 2.2006</text>
+<text x="1306" y="289" font-size="9.5" fill="#6B7280">thresholds 3.2 - clusters 2</text>
+<text x="1306" y="379" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="1306" y="391" font-size="9.5" fill="#6B7280">model 82% of his own cluster - his no-skill rate 84%</text>
+</g>
+<g>
+<rect x="16" y="422" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="184.86" y="422" width="65.14" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="22.50" y="436.00" width="7.14" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="30.64" y="470.67" width="7.14" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="38.79" y="488.00" width="7.14" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="46.93" y="505.33" width="7.14" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="63.21" y="470.67" width="7.14" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="71.36" y="488.00" width="7.14" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="79.50" y="522.67" width="7.14" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="87.64" y="505.33" width="7.14" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="95.79" y="522.67" width="7.14" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="103.93" y="488.00" width="7.14" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="112.07" y="505.33" width="7.14" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="120.21" y="488.00" width="7.14" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="128.36" y="505.33" width="7.14" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="136.50" y="505.33" width="7.14" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="152.79" y="522.67" width="7.14" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="160.93" y="488.00" width="7.14" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="169.07" y="505.33" width="7.14" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="193.50" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="201.64" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="209.79" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="217.93" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="226.07" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="242.36" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<line x1="148.21" y1="422" x2="148.21" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="188.93" y1="422" x2="188.93" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="26" y="438" font-size="11" font-weight="600" fill="#14161E">Jerome Bettis</text>
+<text x="26" y="451" font-size="9.5" fill="#6B7280">RB - 54 games - median 10.3 - mode 0.5 - kurtosis 1.9435</text>
+<text x="26" y="463" font-size="9.5" fill="#6B7280">thresholds 15.5, 20.5 - clusters 3</text>
+<text x="26" y="553" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="26" y="565" font-size="9.5" fill="#6B7280">model 32% of his own cluster - his no-skill rate 70%</text>
+</g>
+<g>
+<rect x="272" y="422" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="477.50" y="422" width="28.50" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="278.50" y="462.00" width="6.13" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="285.63" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="292.75" y="514.00" width="6.13" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="307.00" y="436.00" width="6.13" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="314.13" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="321.25" y="514.00" width="6.13" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="328.38" y="514.00" width="6.13" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="335.50" y="462.00" width="6.13" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="342.63" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="349.75" y="462.00" width="6.13" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="356.88" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="364.00" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="371.13" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="378.25" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="385.38" y="514.00" width="6.13" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="392.50" y="462.00" width="6.13" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="399.63" y="462.00" width="6.13" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="406.75" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="421.00" y="514.00" width="6.13" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="428.13" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="442.38" y="514.00" width="6.13" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="449.50" y="488.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="456.63" y="514.00" width="6.13" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="463.75" y="514.00" width="6.13" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="470.88" y="514.00" width="6.13" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="485.13" y="514.00" width="6.13" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="492.25" y="462.00" width="6.13" height="78.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="499.38" y="514.00" width="6.13" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<line x1="295.81" y1="422" x2="295.81" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="324.31" y1="422" x2="324.31" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="481.06" y1="422" x2="481.06" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="282" y="438" font-size="11" font-weight="600" fill="#14161E">Eddie Lacy</text>
+<text x="282" y="451" font-size="9.5" fill="#6B7280">RB - 53 games - median 13.2 - mode 0.5 - kurtosis 2.1095</text>
+<text x="282" y="463" font-size="9.5" fill="#6B7280">thresholds 2.5, 6.5, 28.5 - clusters 4</text>
+<text x="282" y="553" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="282" y="565" font-size="9.5" fill="#6B7280">model 65% of his own cluster - his no-skill rate 66%</text>
+</g>
+<g>
+<rect x="528" y="422" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="648.00" y="422" width="114.00" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="534.50" y="436.00" width="7.14" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="542.64" y="447.56" width="7.14" height="92.44" fill="#14161E" opacity="0.55"/>
+<rect x="550.79" y="470.67" width="7.14" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="558.93" y="505.33" width="7.14" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="575.21" y="493.78" width="7.14" height="46.22" fill="#14161E" opacity="0.55"/>
+<rect x="583.36" y="528.44" width="7.14" height="11.56" fill="#14161E" opacity="0.55"/>
+<rect x="599.64" y="493.78" width="7.14" height="46.22" fill="#14161E" opacity="0.55"/>
+<rect x="607.79" y="516.89" width="7.14" height="23.11" fill="#14161E" opacity="0.55"/>
+<rect x="615.93" y="528.44" width="7.14" height="11.56" fill="#14161E" opacity="0.55"/>
+<rect x="624.07" y="528.44" width="7.14" height="11.56" fill="#14161E" opacity="0.55"/>
+<rect x="632.21" y="516.89" width="7.14" height="23.11" fill="#14161E" opacity="0.55"/>
+<rect x="656.64" y="528.44" width="7.14" height="11.56" fill="#1C6FD0" opacity="0.85"/>
+<rect x="664.79" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="672.93" y="528.44" width="7.14" height="11.56" fill="#1C6FD0" opacity="0.85"/>
+<rect x="689.21" y="528.44" width="7.14" height="11.56" fill="#1C6FD0" opacity="0.85"/>
+<rect x="697.36" y="528.44" width="7.14" height="11.56" fill="#1C6FD0" opacity="0.85"/>
+<rect x="713.64" y="528.44" width="7.14" height="11.56" fill="#1C6FD0" opacity="0.85"/>
+<rect x="729.93" y="528.44" width="7.14" height="11.56" fill="#1C6FD0" opacity="0.85"/>
+<rect x="738.07" y="528.44" width="7.14" height="11.56" fill="#1C6FD0" opacity="0.85"/>
+<rect x="754.36" y="528.44" width="7.14" height="11.56" fill="#1C6FD0" opacity="0.85"/>
+<line x1="652.07" y1="422" x2="652.07" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="538" y="438" font-size="11" font-weight="600" fill="#14161E">Sammy Morris</text>
+<text x="538" y="451" font-size="9.5" fill="#6B7280">RB - 52 games - median 4.45 - mode 0.5 - kurtosis 2.9381</text>
+<text x="538" y="463" font-size="9.5" fill="#6B7280">thresholds 14.5 - clusters 2</text>
+<text x="538" y="553" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="538" y="565" font-size="9.5" fill="#6B7280">model 40% of his own cluster - his no-skill rate 79%</text>
+</g>
+<g>
+<rect x="784" y="422" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="964.35" y="422" width="53.65" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="790.50" y="488.00" width="12.41" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="803.91" y="436.00" width="12.41" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="817.32" y="477.60" width="12.41" height="62.40" fill="#14161E" opacity="0.55"/>
+<rect x="830.74" y="498.40" width="12.41" height="41.60" fill="#14161E" opacity="0.55"/>
+<rect x="844.15" y="519.20" width="12.41" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="857.56" y="488.00" width="12.41" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="870.97" y="529.60" width="12.41" height="10.40" fill="#14161E" opacity="0.55"/>
+<rect x="884.38" y="488.00" width="12.41" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="897.79" y="529.60" width="12.41" height="10.40" fill="#14161E" opacity="0.55"/>
+<rect x="924.62" y="519.20" width="12.41" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="938.03" y="519.20" width="12.41" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="951.44" y="529.60" width="12.41" height="10.40" fill="#14161E" opacity="0.55"/>
+<rect x="978.26" y="519.20" width="12.41" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="991.68" y="519.20" width="12.41" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1005.09" y="529.60" width="12.41" height="10.40" fill="#1C6FD0" opacity="0.85"/>
+<line x1="917.41" y1="422" x2="917.41" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="971.06" y1="422" x2="971.06" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="794" y="438" font-size="11" font-weight="600" fill="#14161E">Garrett Celek</text>
+<text x="794" y="451" font-size="9.5" fill="#6B7280">WR/TE - 49 games - median 3.8 - mode 1.5 - kurtosis 2.727</text>
+<text x="794" y="463" font-size="9.5" fill="#6B7280">thresholds 9.5, 13.5 - clusters 3</text>
+<text x="794" y="553" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="794" y="565" font-size="9.5" fill="#6B7280">model 78% of his own cluster - his no-skill rate 80%</text>
+</g>
+<g>
+<rect x="1040" y="422" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="1111.14" y="422" width="162.86" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="1046.50" y="436.00" width="7.14" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="1054.64" y="470.67" width="7.14" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="1062.79" y="453.33" width="7.14" height="86.67" fill="#14161E" opacity="0.55"/>
+<rect x="1070.93" y="470.67" width="7.14" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="1079.07" y="505.33" width="7.14" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="1095.36" y="453.33" width="7.14" height="86.67" fill="#14161E" opacity="0.55"/>
+<rect x="1111.64" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1119.79" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1136.07" y="470.67" width="7.14" height="69.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1144.21" y="488.00" width="7.14" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1152.36" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1160.50" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1168.64" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1184.93" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1193.07" y="488.00" width="7.14" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1201.21" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1217.50" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1225.64" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1266.36" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<line x1="1115.21" y1="422" x2="1115.21" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="1050" y="438" font-size="11" font-weight="600" fill="#14161E">Chris Hogan</text>
+<text x="1050" y="451" font-size="9.5" fill="#6B7280">WR/TE - 48 games - median 6.7 - mode 0.5 - kurtosis 2.3493</text>
+<text x="1050" y="463" font-size="9.5" fill="#6B7280">thresholds 8.5 - clusters 2</text>
+<text x="1050" y="553" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="1050" y="565" font-size="9.5" fill="#6B7280">model 43% of his own cluster - his no-skill rate 56%</text>
+</g>
+<g>
+<rect x="1296" y="422" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="1342.71" y="422" width="187.29" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="1302.50" y="505.33" width="7.14" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="1310.64" y="522.67" width="7.14" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="1318.79" y="470.67" width="7.14" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="1335.07" y="522.67" width="7.14" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="1359.50" y="436.00" width="7.14" height="104.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1375.79" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1383.93" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1392.07" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1400.21" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1408.36" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1416.50" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1424.64" y="488.00" width="7.14" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1432.79" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1440.93" y="505.33" width="7.14" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1449.07" y="488.00" width="7.14" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1457.21" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1465.36" y="470.67" width="7.14" height="69.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1473.50" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1481.64" y="488.00" width="7.14" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1497.93" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1506.07" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1514.21" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1522.36" y="522.67" width="7.14" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<line x1="1346.79" y1="422" x2="1346.79" y2="540" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="1306" y="438" font-size="11" font-weight="600" fill="#14161E">Corey Dillon</text>
+<text x="1306" y="451" font-size="9.5" fill="#6B7280">RB - 47 games - median 15.6 - mode 9.1 - kurtosis 2.0138</text>
+<text x="1306" y="463" font-size="9.5" fill="#6B7280">thresholds 7.1 - clusters 2</text>
+<text x="1306" y="553" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="1306" y="565" font-size="9.5" fill="#6B7280">model 86% of his own cluster - his no-skill rate 83%</text>
+</g>
+<g>
+<rect x="16" y="596" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="92.76" y="596" width="157.24" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="22.50" y="610.00" width="6.86" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="30.36" y="662.00" width="6.86" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="38.22" y="644.67" width="6.86" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="46.09" y="696.67" width="6.86" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="53.95" y="662.00" width="6.86" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="69.67" y="644.67" width="6.86" height="69.33" fill="#14161E" opacity="0.55"/>
+<rect x="77.53" y="662.00" width="6.86" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="93.26" y="696.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="101.12" y="696.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="108.98" y="662.00" width="6.86" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="116.84" y="644.67" width="6.86" height="69.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="124.71" y="662.00" width="6.86" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="140.43" y="679.33" width="6.86" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="156.16" y="696.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="164.02" y="696.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="179.74" y="696.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="187.60" y="696.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="203.33" y="696.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="211.19" y="696.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="242.64" y="696.67" width="6.86" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<line x1="96.69" y1="596" x2="96.69" y2="714" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="26" y="612" font-size="11" font-weight="600" fill="#14161E">Laurence Maroney</text>
+<text x="26" y="625" font-size="9.5" fill="#6B7280">RB - 45 games - median 8.7 - mode 1.7 - kurtosis 2.8028</text>
+<text x="26" y="637" font-size="9.5" fill="#6B7280">thresholds 10.7 - clusters 2</text>
+<text x="26" y="727" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="26" y="739" font-size="9.5" fill="#6B7280">model 49% of his own cluster - his no-skill rate 56%</text>
+</g>
+<g>
+<rect x="272" y="596" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="403.79" y="596" width="102.21" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="278.50" y="610.00" width="6.86" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="286.36" y="610.00" width="6.86" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="294.22" y="636.00" width="6.86" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="302.09" y="662.00" width="6.86" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="309.95" y="636.00" width="6.86" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="317.81" y="636.00" width="6.86" height="78.00" fill="#14161E" opacity="0.55"/>
+<rect x="325.67" y="662.00" width="6.86" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="333.53" y="662.00" width="6.86" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="341.40" y="688.00" width="6.86" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="349.26" y="662.00" width="6.86" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="357.12" y="688.00" width="6.86" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="364.98" y="662.00" width="6.86" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="372.84" y="610.00" width="6.86" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="380.71" y="688.00" width="6.86" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="388.57" y="688.00" width="6.86" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="396.43" y="688.00" width="6.86" height="26.00" fill="#14161E" opacity="0.55"/>
+<rect x="420.02" y="688.00" width="6.86" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="435.74" y="688.00" width="6.86" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="443.60" y="688.00" width="6.86" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="459.33" y="688.00" width="6.86" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="467.19" y="688.00" width="6.86" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="475.05" y="662.00" width="6.86" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="482.91" y="688.00" width="6.86" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="498.64" y="688.00" width="6.86" height="26.00" fill="#1C6FD0" opacity="0.85"/>
+<line x1="407.72" y1="596" x2="407.72" y2="714" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="282" y="612" font-size="11" font-weight="600" fill="#14161E">Raheem Mostert</text>
+<text x="282" y="625" font-size="9.5" fill="#6B7280">RB - 45 games - median 6.9 - mode 0.3 - kurtosis 2.4987</text>
+<text x="282" y="637" font-size="9.5" fill="#6B7280">thresholds 16.3 - clusters 2</text>
+<text x="282" y="727" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="282" y="739" font-size="9.5" fill="#6B7280">model 61% of his own cluster - his no-skill rate 80%</text>
+</g>
+<g>
+<rect x="528" y="596" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="631.71" y="596" width="130.29" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="534.50" y="704.55" width="9.86" height="9.45" fill="#14161E" opacity="0.55"/>
+<rect x="545.36" y="657.27" width="9.86" height="56.73" fill="#14161E" opacity="0.55"/>
+<rect x="556.21" y="610.00" width="9.86" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="567.07" y="695.09" width="9.86" height="18.91" fill="#14161E" opacity="0.55"/>
+<rect x="577.93" y="685.64" width="9.86" height="28.36" fill="#14161E" opacity="0.55"/>
+<rect x="588.79" y="676.18" width="9.86" height="37.82" fill="#14161E" opacity="0.55"/>
+<rect x="599.64" y="695.09" width="9.86" height="18.91" fill="#14161E" opacity="0.55"/>
+<rect x="610.50" y="695.09" width="9.86" height="18.91" fill="#14161E" opacity="0.55"/>
+<rect x="621.36" y="695.09" width="9.86" height="18.91" fill="#14161E" opacity="0.55"/>
+<rect x="643.07" y="704.55" width="9.86" height="9.45" fill="#1C6FD0" opacity="0.85"/>
+<rect x="653.93" y="685.64" width="9.86" height="28.36" fill="#1C6FD0" opacity="0.85"/>
+<rect x="664.79" y="704.55" width="9.86" height="9.45" fill="#1C6FD0" opacity="0.85"/>
+<rect x="675.64" y="704.55" width="9.86" height="9.45" fill="#1C6FD0" opacity="0.85"/>
+<rect x="697.36" y="695.09" width="9.86" height="18.91" fill="#1C6FD0" opacity="0.85"/>
+<rect x="708.21" y="704.55" width="9.86" height="9.45" fill="#1C6FD0" opacity="0.85"/>
+<rect x="719.07" y="704.55" width="9.86" height="9.45" fill="#1C6FD0" opacity="0.85"/>
+<rect x="729.93" y="704.55" width="9.86" height="9.45" fill="#1C6FD0" opacity="0.85"/>
+<rect x="751.64" y="704.55" width="9.86" height="9.45" fill="#1C6FD0" opacity="0.85"/>
+<line x1="637.14" y1="596" x2="637.14" y2="714" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="538" y="612" font-size="11" font-weight="600" fill="#14161E">Calvin Austin III</text>
+<text x="538" y="625" font-size="9.5" fill="#6B7280">WR/TE - 45 games - median 3.4 - mode 1.5 - kurtosis 2.7426</text>
+<text x="538" y="637" font-size="9.5" fill="#6B7280">thresholds 8.5 - clusters 2</text>
+<text x="538" y="727" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="538" y="739" font-size="9.5" fill="#6B7280">model 61% of his own cluster - his no-skill rate 73%</text>
+</g>
+<g>
+<rect x="784" y="596" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="937.53" y="596" width="80.47" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="790.50" y="610.00" width="12.41" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="803.91" y="624.86" width="12.41" height="89.14" fill="#14161E" opacity="0.55"/>
+<rect x="817.32" y="610.00" width="12.41" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="830.74" y="654.57" width="12.41" height="59.43" fill="#14161E" opacity="0.55"/>
+<rect x="844.15" y="669.43" width="12.41" height="44.57" fill="#14161E" opacity="0.55"/>
+<rect x="857.56" y="669.43" width="12.41" height="44.57" fill="#14161E" opacity="0.55"/>
+<rect x="870.97" y="699.14" width="12.41" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="897.79" y="624.86" width="12.41" height="89.14" fill="#14161E" opacity="0.55"/>
+<rect x="911.21" y="684.29" width="12.41" height="29.71" fill="#14161E" opacity="0.55"/>
+<rect x="924.62" y="699.14" width="12.41" height="14.86" fill="#14161E" opacity="0.55"/>
+<rect x="964.85" y="699.14" width="12.41" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<rect x="978.26" y="684.29" width="12.41" height="29.71" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1005.09" y="699.14" width="12.41" height="14.86" fill="#1C6FD0" opacity="0.85"/>
+<line x1="877.18" y1="596" x2="877.18" y2="714" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<line x1="944.24" y1="596" x2="944.24" y2="714" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="794" y="612" font-size="11" font-weight="600" fill="#14161E">Cordarrelle Patterson</text>
+<text x="794" y="625" font-size="9.5" fill="#6B7280">WR/TE - 44 games - median 2.85 - mode -0.1 - kurtosis 2.9942</text>
+<text x="794" y="637" font-size="9.5" fill="#6B7280">thresholds 5.9, 10.9 - clusters 3</text>
+<text x="794" y="727" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="794" y="739" font-size="9.5" fill="#6B7280">model 63% of his own cluster - his no-skill rate 68%</text>
+</g>
+<g>
+<rect x="1040" y="596" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="1095.88" y="596" width="178.13" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="1046.50" y="679.33" width="6.13" height="34.67" fill="#14161E" opacity="0.55"/>
+<rect x="1067.88" y="696.67" width="6.13" height="17.33" fill="#14161E" opacity="0.55"/>
+<rect x="1082.13" y="662.00" width="6.13" height="52.00" fill="#14161E" opacity="0.55"/>
+<rect x="1110.63" y="679.33" width="6.13" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1117.75" y="679.33" width="6.13" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1124.88" y="610.00" width="6.13" height="104.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1132.00" y="679.33" width="6.13" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1139.13" y="662.00" width="6.13" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1153.38" y="696.67" width="6.13" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1160.50" y="679.33" width="6.13" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1174.75" y="679.33" width="6.13" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1181.88" y="627.33" width="6.13" height="86.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1189.00" y="679.33" width="6.13" height="34.67" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1196.13" y="696.67" width="6.13" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1203.25" y="644.67" width="6.13" height="69.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1217.50" y="696.67" width="6.13" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1246.00" y="696.67" width="6.13" height="17.33" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1267.38" y="662.00" width="6.13" height="52.00" fill="#1C6FD0" opacity="0.85"/>
+<line x1="1099.44" y1="596" x2="1099.44" y2="714" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="1050" y="612" font-size="11" font-weight="600" fill="#14161E">Josh Jacobs</text>
+<text x="1050" y="625" font-size="9.5" fill="#6B7280">RB - 43 games - median 16.4 - mode 12 - kurtosis 2.666</text>
+<text x="1050" y="637" font-size="9.5" fill="#6B7280">thresholds 8.0 - clusters 2</text>
+<text x="1050" y="727" font-size="9.5" fill="#C0392B" font-weight="700">WRONG FACTOR - NOT USABLE</text>
+<text x="1050" y="739" font-size="9.5" fill="#6B7280">model 87% of his own cluster - his no-skill rate 86%</text>
+</g>
+<g>
+<rect x="1296" y="596" width="240" height="158" fill="#F4F5F8" rx="6"/>
+<rect x="1362.35" y="596" width="167.65" height="118" fill="#1C6FD0" opacity="0.07"/>
+<rect x="1302.50" y="672.40" width="5.71" height="41.60" fill="#14161E" opacity="0.55"/>
+<rect x="1315.91" y="630.80" width="5.71" height="83.20" fill="#14161E" opacity="0.55"/>
+<rect x="1322.62" y="693.20" width="5.71" height="20.80" fill="#14161E" opacity="0.55"/>
+<rect x="1329.32" y="610.00" width="5.71" height="104.00" fill="#14161E" opacity="0.55"/>
+<rect x="1336.03" y="672.40" width="5.71" height="41.60" fill="#14161E" opacity="0.55"/>
+<rect x="1342.74" y="651.60" width="5.71" height="62.40" fill="#14161E" opacity="0.55"/>
+<rect x="1349.44" y="651.60" width="5.71" height="62.40" fill="#14161E" opacity="0.55"/>
+<rect x="1376.26" y="651.60" width="5.71" height="62.40" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1382.97" y="693.20" width="5.71" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1389.68" y="630.80" width="5.71" height="83.20" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1403.09" y="693.20" width="5.71" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1409.79" y="672.40" width="5.71" height="41.60" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1416.50" y="693.20" width="5.71" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1429.91" y="672.40" width="5.71" height="41.60" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1436.62" y="693.20" width="5.71" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1443.32" y="693.20" width="5.71" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1456.74" y="693.20" width="5.71" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1483.56" y="693.20" width="5.71" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1496.97" y="693.20" width="5.71" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<rect x="1523.79" y="693.20" width="5.71" height="20.80" fill="#1C6FD0" opacity="0.85"/>
+<line x1="1365.71" y1="596" x2="1365.71" y2="714" stroke="#C0392B" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="1306" y="612" font-size="11" font-weight="600" fill="#14161E">Brandin Cooks</text>
+<text x="1306" y="625" font-size="9.5" fill="#6B7280">RB - 40 games - median 9.5 - mode 4.5 - kurtosis 2.9656</text>
+<text x="1306" y="637" font-size="9.5" fill="#6B7280">thresholds 9.5 - clusters 2</text>
+<text x="1306" y="727" font-size="9.5" fill="#1C6FD0" font-weight="600">USABLE CATEGORIES</text>
+<text x="1306" y="739" font-size="9.5" fill="#6B7280">model 50% of his own cluster - his no-skill rate 50%</text>
+</g>
+</svg>
