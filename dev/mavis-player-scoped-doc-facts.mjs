@@ -165,6 +165,7 @@ const PROSE_ALLOWED = [
   "11", // his eleven steps
   "7000", // his step 11: "players 2-7000"
   "16000", "0.8", "46.3", "45.5", // quoted from the superseded document and his correction
+  "38", // the stale headline-fact count this QA record quoted before the verifier corrected it
   "4133", // the superseded document's boom count, inside its own scored population
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
   "12", "13", "14", "15", "16", "17", "18", "19", "20",
