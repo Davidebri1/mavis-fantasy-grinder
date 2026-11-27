@@ -1,155 +1,120 @@
 /**
- * Dave's projection model — implemented exactly as written in
+ * Dave's projection model - implemented as written in
  * "docs/DFS Projection Model.md" (the source of truth, verbatim).
  *
  * The method, in his words and ours:
  *
  * 1. Split a player's completed games into HIGH and LOW halves by score.
- *    His doc: "this cut off can be decided any way you like" — we use the
- *    median (the defensible choice: no score dominates the cut, and the two
- *    halves stay balanced as games accumulate). Every game is classified:
- *    with an odd count the middle game joins the LOW half, respecting the
- *    floor side he emphasises.
+ *    "use all the games. so you're splitting your data into two halves.
+ *    high and low, and getting two means". Every game is classified: with
+ *    an odd count the middle game joins the LOW half, respecting the floor
+ *    side he emphasises.
  *
- * 2. Mean of each half, "regardless of opponent".
+ * 2. The means are the RAW half means: highMean over every high game,
+ *    lowMean over every low game, "regardless of opponent".
  *
- * 3. Normality per half, computed directly (no stats library): skewness and
- *    excess kurtosis from the half's central moments. A half is flagged
- *    non-normal when |skew| > 1 or |excess kurtosis| > 2 — thresholds chosen
- *    to be honest at these tiny sample sizes (a half of 3 symmetric points
- *    has excess kurtosis -1.5, so it passes; anything visibly lumpy fails).
- *    If a half is non-normal, peel the single most extreme point (largest
- *    |z| — his "multimodal data, the peaks that don't belong"), re-test, and
- *    repeat at most twice per half. Peeled games are reported by index.
+ * 3. SAMENESS - the only accept/reject in the whole model. Welch's
+ *    two-sample t between the high scores and the low scores. |t| < 2.1
+ *    means the halves are one population: "if they are, you project using
+ *    the raw average of the two samples", and the call is "even".
  *
- * 4. THE FACTOR. For each factor key present in the data, build the ONE
- *    condition that marks the higher-scoring side (the high side of the
- *    median split) and test it the standard way: a two-sample t-test
- *    between the scores of the games WHERE THE CONDITION HOLDS and the
- *    games where it does not (Welch's t, sample variances). Factor keys
- *    are ordinary pre-game conditions; three shapes are handled:
- *      - boolean:      the true group vs the false group; the condition
- *                      is the state whose games average higher, and the
- *                      upcoming game holds it (P = 1) or not (P = 0).
- *      - categorical:  the single value v whose presence or absence
- *                      separates the halves with the best two-sample t
- *                      (opponent=NE, month=December, venue=...); the
- *                      condition is the state whose games average
- *                      higher, v or its complement.
- *      - numeric:      values are split at the midpoint between the two
- *                      halves' factor-value means; the condition is
- *                      "value above the midpoint" when the above group
- *                      averages higher, "below" otherwise, and the test
- *                      compares the scores of the two groups.
- *    A factor is only ALLOWED to set P when its test clears the evidence
- *    floor |t| >= 2 (FACTOR_T_MIN). Every factor that clears the floor is
- *    reported in `factors`, ranked strongest (highest |t|) first, ties
- *    broken alphabetically. One factor at a time sets P — his doc: "you
- *    simply pick one of them (not multiple) and test that" — but the
- *    ranked list makes the set extensible: if the strongest factor's
- *    condition is UNKNOWN for the upcoming game, the next known factor's
- *    condition sets P; when no factor's condition is known, P = 0.5 and
- *    the projection falls to his even-split floor. The defined P values
- *    stay { 0, 1, 0.5 }: a P of 0.5 is defined as "the factor's state is
- *    not known for the upcoming game (or none applies)", which projects
- *    the balanced average of the two half means. It is never read as a
- *    side call; categorisation is done downstream against the cut C.
+ * 4. MULTIMODALITY is a property, never a gate. "if they are non normal
+ *    within one half or another, you separate out the multimodal data. the
+ *    peaks that dont belong" - a hump, not a spike ("they must behave in
+ *    normality in isolation", "not just one or two spikes"). The hump rule
+ *    (detectHumps) finds the humps and the valley between them; the
+ *    separated population is the hump with the smaller game mass, because
+ *    the main body is the biggest hump. The other games in that half form
+ *    the normal group.
  *
- * 5. P for the upcoming game — the probability the HIGH side's factor
- *    condition holds in the upcoming game, from its known conditions:
- *      - boolean/categorical: the upcoming value matches the high side's
- *        condition -> P = 1; it does not -> P = 0; the condition is not
- *        known for the upcoming game -> P = 0.5.
- *      - numeric: let the midpoint be halfway between the halves' factor
- *        means. The upcoming value on the high half's side of the midpoint
- *        -> P = 1; on the low side -> P = 0; exactly at the midpoint or
- *        unknown -> P = 0.5.
- *    If the halves are the same population (step 6) or nothing separates
- *    them, P = 0.5 — his "even split ... as the floor": "half high half low
- *    = total projection".
+ * 5. THE FACTOR. "With the multimodal anomalies removed, you then
+ *    investigate that data for a common thread. this belongs to a
+ *    different population, statistically, so there is a factor." Every
+ *    candidate condition is tested with a two-sample t-test and reported
+ *    with its t, df and p-value. Nothing is accepted or rejected: the list
+ *    is a ranking. The one factor that is used is the condition that
+ *    covers the separated population (at least half of it), or - when
+ *    nothing was separated - the condition with the strongest two-sample
+ *    t. "you simply pick one of them (not multiple) and test that".
  *
- * 6. SAMENESS. Welch's t-test implemented directly (t statistic +
- *    Welch-Satterthwaite degrees of freedom, sample variances). His doc:
- *    "you test them against one another for sameness; they shouldn't be the
- *    same. if they are, you project using the raw average of the two
- *    samples." We treat |t| < 2.1 as "same" (about the two-sided 95%
- *    critical value at these small degrees of freedom) so the projection is
- *    the raw average of all (post-peel) games and no factor is applied.
+ * 6. THE CALL is categorical, never a coefficient. His formula - "high
+ *    Outlier group average x (% probability of occurrence in upcoming
+ *    game) + normal outlier group average x (1 - % prob)" - uses a
+ *    probability that is external and that he turns into a constant: "the
+ *    probability was external, and I turn it into a cosntant, a given. by
+ *    doing that, I dont inherit a variable, an unknown. I inheret a
+ *    resolved constant." So the call names the CATEGORY: "high" /
+ *    "high-outlier" / "high-normal" / "low" / "low-outlier" / "low-normal",
+ *    or "even" when the factor's state is unknown - "by using the average
+ *    category only when youre uncertain (no known outlier slope) ... using
+ *    the even split between good and bad as the floor".
  *
- * 7. PROJECTION = highMean x P + lowMean x (1 - P), exactly his formula
- *    ("High scoring: high outlier group average x % probability of
- *    occurrence in upcoming game + normal group average x (1 - %)"), using
- *    the post-peel means. The 90% confidence interval combines the two
- *    halves' variances weighted by P and (1-P), plus the between-half term
- *    P(1-P)(highMean - lowMean)^2 — the variance of a two-component
- *    mixture. That between-half term is what lets the interval respect
- *    boom/bust, which is the entire point of the model; without it a P of
- *    0.5 across two very different halves would report an absurdly narrow
- *    interval. The multiplier is the normal 90% quantile (1.645); with
- *    halves this small that is anticonservative, which we state rather than
- *    hide.
+ * 7. THE PROJECTION targets the CATEGORY mean, so a boom is reachable: a
+ *    high-outlier call returns the outlier group's mean, which sits ABOVE
+ *    the high half's mean (the upper limit), instead of equalling it. The
+ *    even floor is "half high half low = total projection" over the two
+ *    population means; the same-means path is the raw average of all games.
  *
- * 8. BREAKPOINTS (regime leads). detectBreakpoints walks a player's
- *    career chronologically and flags every distinct contrast:
- *      - team change: the team field changes between consecutive games
- *        when the factors carry a team.
- *      - big swing: |score - previous score| >= 15 DK points.
- *      - level shift: the mean of the 5 games before an index differs
- *        from the mean of the 5 games from it onward by >= 6 DK points
- *        AND the two-sample t between the two windows clears |t| >= 2,
- *        with a cooldown so consecutive windows do not re-flag the
- *        same shift.
- *    Flags are leads, not firings — they are recorded with dates so a
- *    projection's regime can be defended game by game.
+ * 8. BREAKPOINTS (regime leads) - unchanged: detectBreakpoints walks a
+ *    player's career and flags team changes, big swings and level shifts.
  */
 
 /** One completed game. score = DraftKings fantasy points for that game;
- *  factors = objective conditions of that game (isHome, month, passAttempts...). */
+ *  factors = objective conditions of that game (isHome, month, ...). */
 export interface GameLog {
   date: string;
   score: number;
   factors: Record<string, boolean | number | string | undefined>;
 }
 
-export interface DaveProjection {
-  /** highMean x P + lowMean x (1 - P), post-peel. */
-  projection: number;
-  low90: number;
-  high90: number;
-  highMean: number;
-  lowMean: number;
-  /** The factor key that won separation, or null (same halves / none found). */
-  factor: string | null;
-  /** Probability of the high side's factor condition in the upcoming game. */
-  p: number;
-  /** Original indices of games peeled as multimodal outliers. */
-  peeled: number[];
-  /** Welch's t said the two halves are one population -> raw-average path. */
-  sameMeans: boolean;
-  /** Post-peel verdict per half: true = passed the skew/kurtosis test. */
-  normality: { high: boolean; low: boolean };
-  /** How the factor that set P separates the halves (null when none). */
-  factorDetail: {
-    /** The condition that marks the HIGH side (numeric: the midpoint rule). */
-    condition: string;
-    highFraction: number;
-    lowFraction: number;
-  } | null;
-  /**
-   * Every factor whose two-sample t-test cleared the evidence floor,
-   * strongest (highest |t|) first. Empty when the halves are one
-   * population (the raw-average path) or nothing separates them. The
-   * condition that set P is the first one whose state is known for the
-   * upcoming game; when none is known P falls to his even-split floor.
-   */
-  factors: FactorApplication[];
+/** The categories a player's games fall into. "boom" is never a category:
+ *  a boom is a genuine outlier beyond the upper limit of the high half. */
+export type DaveCategoryId =
+  | "high"
+  | "high-outlier"
+  | "high-normal"
+  | "low"
+  | "low-outlier"
+  | "low-normal";
+
+/** The categorical outcome. Never a coefficient. */
+export type DaveCall = DaveCategoryId | "even";
+
+/** The shape of one half. A property, never a gate. */
+export interface DaveShape {
+  /** Raw kurtosis: 3 is normal, below 3 leans bimodal, above 3 leans lognormal. */
+  kurtosis: number;
+  /** Excess kurtosis (raw - 3). */
+  excessKurtosis: number;
+  /** Sample skewness. */
+  skew: number;
+  /** What the half is: one population, or multimodal (a hump was separated out). */
+  verdict: "single population" | "multimodal";
+  /** The valley thresholds detected in this half. */
+  thresholds: number[];
 }
 
-/** The two-sample t-test behind one factor condition: the standard
- *  with/without comparison of game scores (Welch's t). */
+/** One category of the player's games. */
+export interface DaveCategory {
+  id: DaveCategoryId;
+  side: "high" | "low";
+  kind: "population" | "outlier" | "normal";
+  mean: number;
+  n: number;
+  /** Indices into the input games array. */
+  indices: number[];
+  /** Half-open score range [lo, hi); null = unbounded. */
+  lo: number | null;
+  /** Half-open score range [lo, hi); null = unbounded. */
+  hi: number | null;
+}
+
+/** The two-sample t-test behind one factor condition (Welch's). */
 export interface FactorTest {
   t: number;
   df: number;
+  /** Two-sided p-value for the two-sample t-test. */
+  p: number | null;
   /** Games where the condition holds, with their score mean. */
   withN: number;
   withMean: number;
@@ -161,7 +126,7 @@ export interface FactorTest {
 /** One factor condition, its two-sample t-test, and how it evaluates a value. */
 export interface FactorApplication {
   key: string;
-  /** The condition that marks the higher-scoring side, readable. */
+  /** The condition, readable. */
   condition: string;
   /**
    * Whether the condition holds for a candidate value: true / false, or
@@ -169,44 +134,89 @@ export interface FactorApplication {
    */
   holds(value: boolean | number | string | undefined): boolean | undefined;
   test: FactorTest;
-  /** Share of each half (of the post-peel games) where the condition holds. */
-  highFraction: number;
-  lowFraction: number;
-  /** The evidence sentence for a report: condition, t, df, both groups. */
+  /** The side this condition marks. */
+  marks: "high" | "low" | null;
+  /** The category this condition marks on that side. */
+  marksCategory: DaveCategoryId | null;
+  /** Share of the marked category's games where the condition holds. */
+  coverage: number;
+  /** Share of the held group games that lie in the marked category. */
+  purity: number;
+  /** The evidence sentence for a report. */
   detail: string;
 }
 
-/** |t| below this -> the halves are the same population (see module doc). */
-const SAME_T = 2.1;
+export interface DaveProjection {
+  /** The number to display. */
+  projection: number;
+  low90: number;
+  high90: number;
+  /** The HIGH half's mean over ALL its games (raw half mean = the upper limit). */
+  highMean: number;
+  /** The LOW half's mean over ALL its games (raw half mean). */
+  lowMean: number;
+  /** The high side's population mean (the normal group when separated, else the half). */
+  highPopulationMean: number;
+  /** The low side's population mean. */
+  lowPopulationMean: number;
+  /** The categorical outcome. Never a coefficient. */
+  call: DaveCall;
+  /** The factor key that was picked, or null. */
+  factor: string | null;
+  /** The factor's condition in words, or null. */
+  factorCondition: string | null;
+  /** Every candidate condition with its evidence, strongest first. */
+  factors: FactorApplication[];
+  /** Welch's t said the two halves are one population -> the raw-average path. */
+  sameMeans: boolean;
+  sameMeansTest: { t: number; df: number; p: number | null } | null;
+  shape: { high: DaveShape; low: DaveShape };
+  categories: DaveCategory[];
+  /** Indices of the games in the separated (outlier) categories. */
+  separated: number[];
+  /** The largest score in the LOW half. */
+  cut: number;
+  /** Report extras: the sameness test behind the call. */
+  halvesT: number;
+  halvesDf: number;
+  sameMeansT: number;
+  sameMeansDf: number;
+  sameMeansP: number | null;
+  /** Report extras: how many games each half holds. */
+  nHigh: number;
+  nLow: number;
+  /** Report extras: each half's spread. */
+  highVar: number;
+  lowVar: number;
+}
 
-/**
- * Evidence floor for a factor: a condition may only set P when the
- * two-sample t-test of the games where it holds against the games where
- * it does not reaches |t| >= 2. Every applied factor's t and df are
- * reported with it, so a small-df t near 2 is visible as the weaker
- * evidence it is, not buried.
- */
-const FACTOR_T_MIN = 2.0;
-/** Normality thresholds: |skew| > 1 or |excess kurtosis| > 2 -> non-normal. */
-const SKEW_LIMIT = 1;
-const KURT_LIMIT = 2;
-/** At most two peels per half ("repeat at most twice"). */
-const MAX_PEELS = 2;
+/** |t| below this -> the halves are the same population (see module doc 3). */
+export const SAME_T = 2.1;
+/** Normality reference limits, kept for the report: |skew| > 1 or |excess kurtosis| > 2. */
+export const SKEW_LIMIT = 1;
+export const KURT_LIMIT = 2;
 /** Normal 90% quantile for the interval. */
-const Z90 = 1.6449;
+export const Z90 = 1.6449;
+/**
+ * Evidence floor for a factor when nothing was separated: a condition may
+ * only set the call when the two-sample t-test of the games where it holds
+ * against the games where it does not reaches |t| >= 2.
+ */
+export const FACTOR_T_MIN = 2.0;
 
 function mean(xs: number[]): number {
   return xs.reduce((a, b) => a + b, 0) / xs.length;
 }
 
-/** Sample variance (n - 1 denominator). */
+/** Sample variance (n - 1 denominator). A single game has no spread. */
 function sampleVariance(xs: number[]): number {
+  if (xs.length < 2) return 0;
   const m = mean(xs);
   return xs.reduce((a, b) => a + (b - m) * (b - m), 0) / (xs.length - 1);
 }
 
-/** Central-moment skewness and excess kurtosis, computed directly. */
-function skewKurt(xs: number[]): { skew: number; kurt: number } {
+/** Central-moment skewness and EXCESS kurtosis, computed directly. */
+export function skewKurt(xs: number[]): { skew: number; kurt: number } {
   const m = mean(xs);
   let m2 = 0;
   let m3 = 0;
@@ -224,7 +234,14 @@ function skewKurt(xs: number[]): { skew: number; kurt: number } {
   return { skew: m3 / Math.pow(m2, 1.5), kurt: m4 / (m2 * m2) - 3 };
 }
 
-function isNormal(xs: number[]): boolean {
+/** Raw kurtosis and skewness - the shape report's numbers. */
+function rawShape(xs: number[]): { skew: number; kurtosis: number; excessKurtosis: number } {
+  const { skew, kurt } = skewKurt(xs);
+  return { skew, kurtosis: kurt + 3, excessKurtosis: kurt };
+}
+
+/** Normality is a property, not a gate; this stays as a report helper. */
+export function isNormal(xs: number[]): boolean {
   const { skew, kurt } = skewKurt(xs);
   return Math.abs(skew) <= SKEW_LIMIT && Math.abs(kurt) <= KURT_LIMIT;
 }
@@ -245,261 +262,660 @@ export function welchT(a: number[], b: number[]): { t: number; df: number } {
   return { t: (mA - mB) / Math.sqrt(se2), df };
 }
 
-interface Split {
-  low: { game: GameLog; index: number }[];
-  high: { game: GameLog; index: number }[];
+
+// ---------------------------------------------------------------------------
+// The two-sided p-value behind every t-test (Welch's), computed directly.
+// ---------------------------------------------------------------------------
+
+function logGamma(x: number): number {
+  const g = 7;
+  const C = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+    -176.61502916214059, 12.507343278686905, -0.13857109526572012,
+    9.9843695780195716e-6, 1.5056327351493116e-7,
+  ];
+  if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+  x -= 1;
+  let a = C[0];
+  const t = x + g + 0.5;
+  for (let i = 1; i < g + 2; i++) a += C[i] / (x + i);
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+
+function betacf(a: number, b: number, x: number): number {
+  const FPMIN = 1e-300;
+  const EPS = 3e-14;
+  const qab = a + b;
+  const qap = a + 1;
+  const qam = a - 1;
+  let c = 1;
+  let d = 1 - (qab * x) / qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN;
+  d = 1 / d;
+  let h = d;
+  for (let m = 1; m <= 200; m++) {
+    const m2 = 2 * m;
+    let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c;
+    if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    h *= d * c;
+    aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c;
+    if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < EPS) break;
+  }
+  return h;
+}
+
+function incompleteBeta(a: number, b: number, x: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const bt = Math.exp(
+    logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x),
+  );
+  if (x < (a + 1) / (a + b + 2)) return (bt * betacf(a, b, x)) / a;
+  return 1 - (bt * betacf(b, a, 1 - x)) / b;
+}
+
+/** Two-sided p-value for Welch's t with df degrees of freedom. */
+export function tPValue(t: number, df: number): number | null {
+  if (!Number.isFinite(t) || !Number.isFinite(df) || df <= 0) return null;
+  const x = df / (df + t * t);
+  return incompleteBeta(df / 2, 0.5, x);
+}
+
+// ---------------------------------------------------------------------------
+// The hump rule - "the peaks that dont belong" (module doc 4).
+// ---------------------------------------------------------------------------
+
+export interface DaveHumps {
+  /** Peak positions as score values. */
+  peaks: number[];
+  /** Valley thresholds as score values. */
+  thresholds: number[];
 }
 
 /**
- * Median split. His doc: "this cut off can be decided any way you like".
- * Every game is classified — with an odd count the middle game joins the
- * LOW half (the floor side).
+ * Detect the humps in one set of scores and the valley between them.
+ *
+ * 1-point bins, smoothed counts (0.25 / 0.5 / 0.25), a peak needs at least
+ * two games in its bin and at least three games of mass around it, peaks
+ * within two bins are merged, and a valley is accepted when its smoothed
+ * count is at most half the smaller of the two peaks it sits between. The
+ * threshold is the valley's centre. A single spike is not a hump: "they
+ * must behave in normality in isolation", "not just one or two spikes".
  */
-function medianSplit(games: GameLog[]): Split {
-  const sorted = games
-    .map((game, index) => ({ game, index }))
-    .sort((a, b) => a.game.score - b.game.score);
-  const mid = Math.floor(sorted.length / 2);
-  const lowEnd = sorted.length % 2 === 0 ? mid : mid + 1;
-  return { low: sorted.slice(0, lowEnd), high: sorted.slice(lowEnd) };
-}
-
-/**
- * Peel the multimodal outlier (largest |z|) from a non-normal half, at most
- * MAX_PEELS times, never shrinking the half below 3 points (a 3-point
- * symmetric half is the smallest that can pass the normality test).
- */
-function peelOutliers(
-  entries: { game: GameLog; index: number }[],
-): { kept: { game: GameLog; index: number }[]; peeled: number[] } {
-  const kept = [...entries];
-  const peeled: number[] = [];
-  for (let pass = 0; pass < MAX_PEELS; pass++) {
-    if (kept.length <= 3) break;
-    if (isNormal(kept.map((e) => e.game.score))) break;
-    const m = mean(kept.map((e) => e.game.score));
-    const sd = Math.sqrt(sampleVariance(kept.map((e) => e.game.score)));
-    let worst = 0;
-    let worstZ = -1;
-    kept.forEach((e, i) => {
-      const z = sd === 0 ? 0 : Math.abs(e.game.score - m) / sd;
-      if (z > worstZ) {
-        worstZ = z;
-        worst = i;
-      }
-    });
-    peeled.push(kept[worst].index);
-    kept.splice(worst, 1);
+export function detectHumps(scores: number[]): DaveHumps {
+  if (scores.length === 0) return { peaks: [], thresholds: [] };
+  const min = Math.min(...scores);
+  const max = Math.max(...scores);
+  const width = 1;
+  const nb = Math.max(1, Math.floor((max - min) / width) + 1);
+  const counts = new Array<number>(nb).fill(0);
+  for (const s of scores) {
+    counts[Math.min(nb - 1, Math.max(0, Math.floor((s - min) / width)))]++;
   }
-  return { kept, peeled };
-}
-
-/**
- * Factor detection — the two-sample t-test machinery (see module doc 4).
- * Each candidate key yields ONE condition oriented to the higher-scoring
- * side, tested the standard way: the scores of the games where the
- * condition holds vs the scores of the games where it does not. Only
- * candidates clearing FACTOR_T_MIN are returned; |t| ties break
- * alphabetically for determinism.
- */
-
-/** Scores of the entries whose factor value satisfies hold (undefined
- *  values never join a group — an unknown is unknown, not a group). */
-function scoresFor(
-  entries: { game: GameLog }[],
-  key: string,
-  hold: (v: boolean | number | string) => boolean,
-): number[] {
-  const out: number[] = [];
-  for (const e of entries) {
-    const v = e.game.factors[key];
-    if (v === undefined) continue;
-    if (hold(v)) out.push(e.game.score);
+  const smooth = counts.map((_, i) => {
+    const a = counts[i - 1] ?? counts[i];
+    const b = counts[i];
+    const c = counts[i + 1] ?? counts[i];
+    return 0.25 * a + 0.5 * b + 0.25 * c;
+  });
+  let peaks: number[] = [];
+  for (let i = 0; i < nb; i++) {
+    if (counts[i] < 2) continue;
+    const l = smooth[i - 1] ?? smooth[i];
+    const r = smooth[i + 1] ?? smooth[i];
+    if (smooth[i] >= l && smooth[i] > r) peaks.push(i);
   }
-  return out;
-}
-
-/** Fraction of entries where the condition holds (unknowns excluded from
- *  the denominator, like the scores above). */
-function fractionHolding(
-  entries: { game: GameLog }[],
-  key: string,
-  hold: (v: boolean | number | string) => boolean,
-): number {
-  let holdCount = 0;
-  let known = 0;
-  for (const e of entries) {
-    const v = e.game.factors[key];
-    if (v === undefined) continue;
-    known++;
-    if (hold(v)) holdCount++;
+  peaks = peaks.filter(
+    (p) => (counts[p - 1] ?? 0) + counts[p] + (counts[p + 1] ?? 0) >= 3,
+  );
+  const merged: number[] = [];
+  for (const p of peaks) {
+    const last = merged[merged.length - 1];
+    if (last !== undefined && p - last <= 2) {
+      if (counts[p] > counts[last]) merged[merged.length - 1] = p;
+    } else merged.push(p);
   }
-  return known ? holdCount / known : 0;
-}
-
-function buildApplication(
-  key: string,
-  condition: string,
-  holds: (v: boolean | number | string | undefined) => boolean | undefined,
-  withScores: number[],
-  withoutScores: number[],
-  highEntries: { game: GameLog }[],
-  lowEntries: { game: GameLog }[],
-): FactorApplication | null {
-  if (withScores.length < 2 || withoutScores.length < 2) return null;
-  const test = welchT(withScores, withoutScores);
-  if (Math.abs(test.t) < FACTOR_T_MIN) return null;
-  const highFraction = fractionHolding(highEntries, key, (v) => holds(v) === true);
-  const lowFraction = fractionHolding(lowEntries, key, (v) => holds(v) === true);
-  const detail =
-    condition +
-    " (two-sample t-test: t=" +
-    test.t.toFixed(2) +
-    ", df=" +
-    test.df +
-    "; scores average " +
-    mean(withScores).toFixed(2) +
-    " in n=" +
-    withScores.length +
-    " games when the condition holds vs " +
-    mean(withoutScores).toFixed(2) +
-    " in n=" +
-    withoutScores.length +
-    " games when it does not)";
+  peaks = merged;
+  const thresholds: number[] = [];
+  for (let i = 0; i + 1 < peaks.length; i++) {
+    const a = peaks[i];
+    const b = peaks[i + 1];
+    let valley = a;
+    for (let j = a + 1; j < b; j++) if (smooth[j] < smooth[valley]) valley = j;
+    if (smooth[valley] > 0.5 * Math.min(smooth[a], smooth[b])) continue;
+    thresholds.push(min + (valley + 0.5) * width);
+  }
   return {
-    key,
-    condition,
-    holds,
-    test: {
-      t: test.t,
-      df: test.df,
-      withN: withScores.length,
-      withMean: mean(withScores),
-      withoutN: withoutScores.length,
-      withoutMean: mean(withoutScores),
-    },
-    highFraction,
-    lowFraction,
-    detail,
+    peaks: peaks.map((p) => min + (p + 0.5) * width),
+    thresholds,
   };
 }
 
+// ---------------------------------------------------------------------------
+// The two populations
+// ---------------------------------------------------------------------------
+
+interface Entry {
+  game: GameLog;
+  index: number;
+  score: number;
+}
+
+interface Split {
+  low: Entry[];
+  high: Entry[];
+  /** The largest score in the LOW half. */
+  cut: number;
+}
+
 /**
- * Detect the factor candidates for one player at one target game.
+ * The split. "use all the games. so you're splitting your data into two
+ * halves. high and low". With an odd count the middle game joins the LOW
+ * half - the floor side he emphasises.
  *
- * Two shapes of condition, one candidate per key:
- *  - non-numeric keys: for every observed value v, test the state
- *    "key = v" against its complement; whichever of v / its complement
- *    averages the higher score becomes the condition (the complement
- *    candidate is "key != v"). The best value wins the key.
- *  - numeric keys: split at the midpoint between the halves' own means
- *    of the factor value; the condition is the side of the midpoint
- *    whose games score higher; the test compares the two groups' scores.
+ * The split is made value-consistent: when the cut score sits in both
+ * halves, the games at that score all join the LOW half, so no score value
+ * ever belongs to two halves. That is what lets the category ranges tile
+ * the score space exactly once ("you now have categories now for every
+ * possible outcome. nothing gets dropped as a miss").
  */
-function detectFactorCandidates(
-  low: { game: GameLog; index: number }[],
-  high: { game: GameLog; index: number }[],
-): FactorApplication[] {
-  const keys = new Set<string>();
-  for (const e of [...low, ...high]) {
-    for (const k of Object.keys(e.game.factors)) keys.add(k);
+function splitHalves(games: GameLog[]): Split {
+  const entries: Entry[] = games.map((game, index) => ({
+    game,
+    index,
+    score: game.score,
+  }));
+  const sorted = [...entries].sort((a, b) => a.score - b.score || a.index - b.index);
+  const lowEnd = Math.ceil(sorted.length / 2);
+  let low = sorted.slice(0, lowEnd);
+  let high = sorted.slice(lowEnd);
+  const cut = low.length ? low[low.length - 1].score : NaN;
+  if (high.length > 0 && high[0].score === cut) {
+    const moved = high.filter((e) => e.score === cut);
+    const kept = high.filter((e) => e.score !== cut);
+    const newLow = [...low, ...moved];
+    if (newLow.length >= 2 && kept.length >= 2) {
+      low = newLow;
+      high = kept;
+    }
   }
+  return { low, high, cut };
+}
+
+/** The cut C: the largest score in the LOW half of the engine's own split. */
+export function cutOf(scores: number[]): number {
+  const sorted = [...scores].sort((a, b) => a - b);
+  const lowEnd = Math.ceil(sorted.length / 2);
+  return sorted[lowEnd - 1];
+}
+
+
+// ---------------------------------------------------------------------------
+// The shape of one half - and the separation of its multimodal data
+// ---------------------------------------------------------------------------
+
+interface SideAnalysis {
+  side: "high" | "low";
+  entries: Entry[];
+  /** The raw half mean over every game in the half. */
+  mean: number;
+  variance: number;
+  /** Every valley threshold detected in this half. */
+  thresholds: number[];
+  /** The threshold the categories were split on (null when one population). */
+  splitThreshold: number | null;
+  /** The separated population: "the peaks that dont belong". */
+  separated: Entry[];
+  /** Every other game in this half. */
+  normal: Entry[];
+  isMultimodal: boolean;
+}
+
+/** The region a score falls in, given the half's thresholds. */
+function regionOf(score: number, thresholds: number[]): number {
+  let c = 0;
+  for (const t of thresholds) if (score >= t) c++;
+  return c;
+}
+
+/**
+ * Analyse one half and separate its multimodal data.
+ *
+ * "if they are non normal within one half or another, you separate out the
+ * multimodal data. the peaks that dont belong. sort it out." A half with
+ * one hump, or with no valley, stays ONE population - skew and one-off
+ * spikes are natural and normal. When the two sides of a valley carry the
+ * same number of games, the hump better covered by the strongest factor
+ * condition wins; failing that, the outer hump (the upper one on the high
+ * side, the lower one on the low side).
+ */
+function analyseSide(
+  side: "high" | "low",
+  entries: Entry[],
+  tieHeld: Set<number> | null,
+): SideAnalysis {
+  const scores = entries.map((e) => e.score);
+  const humps = detectHumps(scores);
+  const base: SideAnalysis = {
+    side,
+    entries,
+    mean: mean(scores),
+    variance: sampleVariance(scores),
+    thresholds: humps.thresholds,
+    splitThreshold: null,
+    separated: [],
+    normal: [...entries],
+    isMultimodal: false,
+  };
+  if (humps.thresholds.length === 0) return base;
+
+  const coverageOf = (group: Entry[]): number => {
+    if (!tieHeld) return 0;
+    const held = group.filter((e) => tieHeld.has(e.index)).length;
+    return group.length ? held / group.length : 0;
+  };
+
+  let best: { t: number; minority: Entry[]; size: number; outer: number } | null = null;
+  for (const t of humps.thresholds) {
+    const below = entries.filter((e) => e.score < t);
+    const above = entries.filter((e) => e.score >= t);
+    if (below.length === 0 || above.length === 0) continue;
+    let minority: Entry[];
+    if (below.length < above.length) minority = below;
+    else if (above.length < below.length) minority = above;
+    else {
+      const covBelow = coverageOf(below);
+      const covAbove = coverageOf(above);
+      if (covBelow !== covAbove) minority = covBelow > covAbove ? below : above;
+      else minority = side === "high" ? above : below;
+    }
+    if (minority.length < 2) continue;
+    const minorityMean = mean(minority.map((e) => e.score));
+    const outer = side === "high" ? minorityMean : -minorityMean;
+    if (
+      !best ||
+      minority.length < best.size ||
+      (minority.length === best.size && outer > best.outer)
+    ) {
+      best = { t, minority, size: minority.length, outer };
+    }
+  }
+  if (!best) return base;
+  const separated = best.minority;
+  const normal = entries.filter((e) => !separated.includes(e));
+  if (normal.length === 0) return base;
+  return {
+    ...base,
+    splitThreshold: best.t,
+    separated,
+    normal,
+    isMultimodal: true,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The categories
+// ---------------------------------------------------------------------------
+
+interface BuiltCategories {
+  categories: DaveCategory[];
+  /** The high side's population category ("high" or "high-normal"). */
+  highPopulation: DaveCategory;
+  /** The low side's population category ("low" or "low-normal"). */
+  lowPopulation: DaveCategory;
+  highOutlier: DaveCategory | null;
+  lowOutlier: DaveCategory | null;
+  /** The score boundary between the low and high halves. */
+  boundary: number;
+}
+
+/**
+ * Build the categories. Every game lands in exactly one category and the
+ * category ranges tile the score space exactly once, so an actual outcome
+ * always has a category: "you now have categories now for every possible
+ * outcome. nothing gets dropped as a miss".
+ */
+function buildCategories(
+  high: SideAnalysis,
+  low: SideAnalysis,
+): BuiltCategories {
+  const lowMax = Math.max(...low.entries.map((e) => e.score));
+  const highMin = Math.min(...high.entries.map((e) => e.score));
+  const boundary = highMin > lowMax ? (lowMax + highMin) / 2 : lowMax;
+  const categories: DaveCategory[] = [];
+
+  const push = (
+    id: DaveCategoryId,
+    side: "high" | "low",
+    kind: "population" | "outlier" | "normal",
+    group: Entry[],
+    lo: number | null,
+    hi: number | null,
+  ): DaveCategory => {
+    const cat: DaveCategory = {
+      id,
+      side,
+      kind,
+      mean: mean(group.map((e) => e.score)),
+      n: group.length,
+      indices: group.map((e) => e.index),
+      lo,
+      hi,
+    };
+    categories.push(cat);
+    return cat;
+  };
+
+  let highPopulation: DaveCategory;
+  let lowPopulation: DaveCategory;
+  let highOutlier: DaveCategory | null = null;
+  let lowOutlier: DaveCategory | null = null;
+
+  if (!low.isMultimodal) {
+    lowPopulation = push("low", "low", "population", low.entries, null, boundary);
+  } else {
+    const t = low.splitThreshold as number;
+    const below = low.entries.filter((e) => e.score < t);
+    const above = low.entries.filter((e) => e.score >= t);
+    const sepIsBelow = low.separated === below || low.separated.every((e) => e.score < t);
+    lowOutlier = push(
+      "low-outlier",
+      "low",
+      "outlier",
+      low.separated,
+      sepIsBelow ? null : t,
+      sepIsBelow ? t : boundary,
+    );
+    lowPopulation = push(
+      "low-normal",
+      "low",
+      "normal",
+      low.normal,
+      sepIsBelow ? t : null,
+      sepIsBelow ? boundary : t,
+    );
+  }
+
+  if (!high.isMultimodal) {
+    highPopulation = push("high", "high", "population", high.entries, boundary, null);
+  } else {
+    const t = high.splitThreshold as number;
+    const below = high.entries.filter((e) => e.score < t);
+    const sepIsBelow = high.separated === below || high.separated.every((e) => e.score < t);
+    highOutlier = push(
+      "high-outlier",
+      "high",
+      "outlier",
+      high.separated,
+      sepIsBelow ? boundary : t,
+      sepIsBelow ? t : null,
+    );
+    highPopulation = push(
+      "high-normal",
+      "high",
+      "normal",
+      high.normal,
+      sepIsBelow ? t : boundary,
+      sepIsBelow ? null : t,
+    );
+  }
+
+  categories.sort((a, b) => (a.lo === null ? -Infinity : a.lo) - (b.lo === null ? -Infinity : b.lo));
+  return { categories, highPopulation, lowPopulation, highOutlier, lowOutlier, boundary };
+}
+
+
+// ---------------------------------------------------------------------------
+// The factor - "the common thread"
+// ---------------------------------------------------------------------------
+
+interface RawCandidate {
+  key: string;
+  condition: string;
+  holds(value: boolean | number | string | undefined): boolean | undefined;
+  /** The games where the condition holds. */
+  held: Entry[];
+  /** The games where it does not hold. Unknown values join neither group. */
+  without: Entry[];
+  test: FactorTest;
+}
+
+interface MarkedCandidate extends RawCandidate {
+  marks: "high" | "low";
+  marksCategory: DaveCategoryId;
+  coverage: number;
+  purity: number;
+  /** Share of the separated population this condition covers. */
+  sepCoverage: number;
+  detail: string;
+}
+
+/**
+ * Every candidate condition, one per partition of the data.
+ *
+ * "With the multimodal anomalies removed, you then investigate that data
+ * for a common thread." A candidate is a way of splitting the games:
+ *   - boolean / categorical: key = v (and its complement key != v), one
+ *     condition per value, oriented to the side whose games score higher;
+ *   - numeric: key > mid / key < mid, where mid is the midpoint between
+ *     the two halves' means of that key's values.
+ *
+ * Nothing is accepted or rejected here: every candidate is reported with
+ * its t, df, p-value, group sizes, coverage and purity.
+ */
+function buildRawCandidates(low: Entry[], high: Entry[]): RawCandidate[] {
   const entries = [...low, ...high];
-  const out: FactorApplication[] = [];
+  const keys = new Set<string>();
+  for (const e of entries) for (const k of Object.keys(e.game.factors)) keys.add(k);
+  const out: RawCandidate[] = [];
+  const seen = new Set<string>();
+
+  const add = (
+    key: string,
+    condition: string,
+    holds: (v: boolean | number | string | undefined) => boolean | undefined,
+    held: Entry[],
+    without: Entry[],
+  ): void => {
+    if (held.length < 2 || without.length < 2) return;
+    const signature = key + "|" + held.map((e) => e.index).join(",");
+    if (seen.has(signature)) return;
+    seen.add(signature);
+    const test = welchT(
+      held.map((e) => e.score),
+      without.map((e) => e.score),
+    );
+    out.push({
+      key,
+      condition,
+      holds,
+      held,
+      without,
+      test: {
+        t: test.t,
+        df: test.df,
+        p: tPValue(test.t, test.df),
+        withN: held.length,
+        withMean: mean(held.map((e) => e.score)),
+        withoutN: without.length,
+        withoutMean: mean(without.map((e) => e.score)),
+      },
+    });
+  };
 
   for (const key of Array.from(keys).sort()) {
     const known = entries.filter((e) => e.game.factors[key] !== undefined);
     if (known.length < 4) continue;
-
     const values = known.map((e) => e.game.factors[key]);
     if (values.every((v) => typeof v === "number")) {
-      // Numeric: the midpoint rule.
       const highVals = high
         .map((e) => Number(e.game.factors[key]))
-
         .filter((v) => Number.isFinite(v));
       const lowVals = low
         .map((e) => Number(e.game.factors[key]))
-
         .filter((v) => Number.isFinite(v));
       if (highVals.length < 2 || lowVals.length < 2) continue;
       const mid = (mean(highVals) + mean(lowVals)) / 2;
-      const aboveScores = scoresFor(entries, key, (v) => Number(v) > mid);
-      const belowScores = scoresFor(entries, key, (v) => Number(v) < mid);
-      if (aboveScores.length < 2 || belowScores.length < 2) continue;
-      const aboveHigher = mean(aboveScores) >= mean(belowScores);
-      const app = aboveHigher
-        ? buildApplication(
-            key,
-            key + " > " + mid.toFixed(2),
-            (v) => {
-              if (v === undefined || typeof v !== "number" || !Number.isFinite(v)) return undefined;
-              if (v === mid) return undefined; // exactly at the midpoint -> uncertain
-              return v > mid;
-            },
-            aboveScores,
-            belowScores,
-            high,
-            low,
-          )
-        : buildApplication(
-            key,
-            key + " < " + mid.toFixed(2),
-            (v) => {
-              if (v === undefined || typeof v !== "number" || !Number.isFinite(v)) return undefined;
-              if (v === mid) return undefined;
-              return v < mid;
-            },
-            belowScores,
-            aboveScores,
-            high,
-            low,
-          );
-      if (app) out.push(app);
+      const above = known.filter((e) => Number(e.game.factors[key]) > mid);
+      const below = known.filter((e) => Number(e.game.factors[key]) < mid);
+      if (above.length < 2 || below.length < 2) continue;
+      const aboveHigher = mean(above.map((e) => e.score)) >= mean(below.map((e) => e.score));
+      const holds = aboveHigher
+        ? (v: boolean | number | string | undefined) =>
+            v === undefined || typeof v !== "number" || !Number.isFinite(v)
+              ? undefined
+              : v === mid
+                ? undefined
+                : v > mid
+        : (v: boolean | number | string | undefined) =>
+            v === undefined || typeof v !== "number" || !Number.isFinite(v)
+              ? undefined
+              : v === mid
+                ? undefined
+                : v < mid;
+      add(
+        key,
+        aboveHigher ? key + " > " + mid.toFixed(2) : key + " < " + mid.toFixed(2),
+        holds,
+        aboveHigher ? above : below,
+        aboveHigher ? below : above,
+      );
       continue;
     }
 
-    // Non-numeric: best single value, oriented to the higher-scoring state.
-    const distinctValues = Array.from(new Set(known.map((e) => String(e.game.factors[key])))).sort();
-    let best: FactorApplication | null = null;
-    for (const v of distinctValues) {
-      const equalsScores = scoresFor(entries, key, (x) => String(x) === v);
-      const notScores = scoresFor(entries, key, (x) => String(x) !== v);
-      const equalsHigher = mean(equalsScores) >= mean(notScores);
-      const app = equalsHigher
-        ? buildApplication(
-            key,
-            key + "=" + v,
-            (x) => (x === undefined ? undefined : String(x) === v),
-            equalsScores,
-            notScores,
-            high,
-            low,
-          )
-        : buildApplication(
-            key,
-            key + "!=" + v,
-            (x) => (x === undefined ? undefined : String(x) !== v),
-            notScores,
-            equalsScores,
-            high,
-            low,
-          );
-      if (!app) continue;
-      if (!best || Math.abs(app.test.t) > Math.abs(best.test.t)) best = app;
+    const distinct = Array.from(new Set(known.map((e) => String(e.game.factors[key])))).sort();
+    for (const v of distinct) {
+      const equals = known.filter((e) => String(e.game.factors[key]) === v);
+      const notEquals = known.filter((e) => String(e.game.factors[key]) !== v);
+      if (equals.length < 2 || notEquals.length < 2) continue;
+      const equalsHigher = mean(equals.map((e) => e.score)) >= mean(notEquals.map((e) => e.score));
+      // The condition names the state the held games are in: "key=v" when
+      // they are v's games, "key!=v" when they are the rest - except on a
+      // two-state key, where the rest IS the other state and is named
+      // directly ("isHome=true", never "isHome!=false").
+      const other = distinct.length === 2 ? distinct.find((x) => x !== v) : undefined;
+      const condition = equalsHigher
+        ? key + "=" + v
+        : other !== undefined
+          ? key + "=" + other
+          : key + "!=" + v;
+      const holds = equalsHigher
+        ? (x: boolean | number | string | undefined) =>
+            x === undefined ? undefined : String(x) === v
+        : other !== undefined
+          ? (x: boolean | number | string | undefined) =>
+              x === undefined ? undefined : String(x) === other
+          : (x: boolean | number | string | undefined) =>
+              x === undefined ? undefined : String(x) !== v;
+      add(
+        key,
+        condition,
+        holds,
+        equalsHigher ? equals : notEquals,
+        equalsHigher ? notEquals : equals,
+      );
     }
-    if (best) out.push(best);
   }
-
-  out.sort((a, b) => Math.abs(b.test.t) - Math.abs(a.test.t) || a.key.localeCompare(b.key));
   return out;
 }
 
+/** Rank the candidates by the strength of the two-sample t-test. */
+function rankCandidates(candidates: RawCandidate[]): RawCandidate[] {
+  return [...candidates].sort(
+    (a, b) =>
+      Math.abs(b.test.t) - Math.abs(a.test.t) ||
+      a.key.localeCompare(b.key) ||
+      a.condition.localeCompare(b.condition),
+  );
+}
+
 /**
- * Project the next game from completed game logs, per the module doc.
- * upcoming = the objective conditions already known about the next game
- * (isHome, month, ...). Throws when there are fewer than 4 games — the
- * median split needs two halves of at least two.
+ * Say what each candidate marks. A condition that covers at least half of
+ * a separated population marks that population - "this belongs to a
+ * different population, statistically, so there is a factor". Otherwise it
+ * marks the side its held group comes from.
+ */
+function markCandidates(
+  candidates: RawCandidate[],
+  cats: BuiltCategories,
+  high: SideAnalysis,
+  low: SideAnalysis,
+): MarkedCandidate[] {
+  const catById = new Map(cats.categories.map((c) => [c.id, c]));
+  return candidates.map((c) => {
+    const heldIds = new Set(c.held.map((e) => e.index));
+    const heldHigh = c.held.filter((e) => high.entries.includes(e)).length;
+    const heldLow = c.held.filter((e) => low.entries.includes(e)).length;
+    const majoritySide: "high" | "low" =
+      heldHigh > heldLow ? "high" : heldLow > heldHigh ? "low" : high.mean >= low.mean ? "high" : "low";
+
+    const covOf = (cat: DaveCategory | null): number => {
+      if (!cat) return 0;
+      const inside = c.held.filter((e) => cat.indices.includes(e.index)).length;
+      return cat.n ? inside / cat.n : 0;
+    };
+    const covHigh = covOf(cats.highOutlier);
+    const covLow = covOf(cats.lowOutlier);
+    const sepCoverage = Math.max(covHigh, covLow);
+    const sepSide: "high" | "low" | null =
+      sepCoverage <= 0 ? null : covHigh >= covLow ? "high" : "low";
+
+    const marks: "high" | "low" = sepSide ?? majoritySide;
+    const marksCategory: DaveCategoryId =
+      sepSide !== null
+        ? sepSide === "high"
+          ? "high-outlier"
+          : "low-outlier"
+        : marks === "high"
+          ? cats.highPopulation.id
+          : cats.lowPopulation.id;
+    const marked = catById.get(marksCategory) ?? null;
+    const inside = marked ? c.held.filter((e) => marked.indices.includes(e.index)).length : 0;
+    const coverage = marked && marked.n ? inside / marked.n : 0;
+    const purity = c.held.length ? inside / c.held.length : 0;
+    const pText = c.test.p === null ? "n/a" : c.test.p.toFixed(4);
+    const detail =
+      c.condition +
+      " (two-sample t-test: t=" +
+      c.test.t.toFixed(2) +
+      ", df=" +
+      c.test.df.toFixed(2) +
+      "; p=" +
+      pText +
+      "; scores average " +
+      c.test.withMean.toFixed(2) +
+      " in n=" +
+      c.test.withN +
+      " games when the condition holds vs " +
+      c.test.withoutMean.toFixed(2) +
+      " in n=" +
+      c.test.withoutN +
+      " games when it does not)";
+    return { ...c, marks, marksCategory, coverage, purity, sepCoverage, detail };
+  });
+}
+
+
+// ---------------------------------------------------------------------------
+// The projection
+// ---------------------------------------------------------------------------
+
+/**
+ * Project the next game from completed game logs, as written in Dave's
+ * document. upcoming = the objective conditions already known about the
+ * next game (isHome, month, opponent, ...). Throws when there are fewer
+ * than 4 games - the split needs two halves of at least two.
  */
 export function projectDave(
   games: GameLog[],
@@ -512,93 +928,166 @@ export function projectDave(
         ".",
     );
   }
-  const split = medianSplit(games);
-  const lowPeeled = peelOutliers(split.low);
-  const highPeeled = peelOutliers(split.high);
-  const peeled = [...lowPeeled.peeled, ...highPeeled.peeled].sort(
-    (a, b) => a - b,
-  );
 
-  const lowScores = lowPeeled.kept.map((e) => e.game.score);
-  const highScores = highPeeled.kept.map((e) => e.game.score);
+  // 1 + 2. The two populations and their raw half means.
+  const split = splitHalves(games);
+  const lowScores = split.low.map((e) => e.score);
+  const highScores = split.high.map((e) => e.score);
   const lowMean = mean(lowScores);
   const highMean = mean(highScores);
-  const lowVar = sampleVariance(lowScores);
-  const highVar = sampleVariance(highScores);
 
-  const normality = {
-    high: isNormal(highScores),
-    low: isNormal(lowScores),
+  // 3. SAMENESS - the only accept/reject in the model.
+  const halves = welchT(highScores, lowScores);
+  const sameMeans = Math.abs(halves.t) < SAME_T;
+  const sameMeansTest = {
+    t: halves.t,
+    df: halves.df,
+    p: tPValue(halves.t, halves.df),
   };
 
-  // Sameness: Welch's t-test, implemented directly (see module doc).
-  const { t } = welchT(highScores, lowScores);
-  const sameMeans = Math.abs(t) < SAME_T;
+  // 4 + 5. The candidates come first (they need only the two halves); the
+  // separation uses the strongest candidate to break a mass tie; then the
+  // candidates learn what they mark.
+  const raw = buildRawCandidates(split.low, split.high);
+  const rankedRaw = rankCandidates(raw);
+  const tieHeld = new Set<number>(
+    rankedRaw.length ? rankedRaw[0].held.map((e) => e.index) : [],
+  );
+  const highSide = analyseSide("high", split.high, tieHeld);
+  const lowSide = analyseSide("low", split.low, tieHeld);
+  const cats = buildCategories(highSide, lowSide);
+  const marked = markCandidates(rankedRaw, cats, highSide, lowSide);
 
-  const build = (p: number): DaveProjection => {
-    // Within-half variances weighted by P and (1-P), plus the between-half
-    // boom/bust term — the variance of a two-component mixture.
-    const variance =
-      p * p * highVar +
-      (1 - p) * (1 - p) * lowVar +
-      p * (1 - p) * Math.pow(highMean - lowMean, 2);
-    const halfWidth = Z90 * Math.sqrt(variance);
-    const projection = highMean * p + lowMean * (1 - p);
-    return {
-      projection,
-      low90: projection - halfWidth,
-      high90: projection + halfWidth,
-      highMean,
-      lowMean,
-      factor: null,
-      p,
-      peeled,
-      sameMeans,
-      normality,
-      factorDetail: null,
-      factors: [],
-    };
-  };
-
-  if (sameMeans) {
-    // His doc: "if they are, you project using the raw average of the two
-    // samples." Raw average of all post-peel games; even-split floor.
-    const raw = mean([...lowScores, ...highScores]);
-    return { ...build(0.5), projection: raw, factor: null };
+  // The one factor that is used: the thread through the separated
+  // population when there is one, otherwise the strongest separation.
+  let selected: MarkedCandidate | null = null;
+  if (cats.highOutlier || cats.lowOutlier) {
+    const eligible = marked
+      .filter((c) => c.sepCoverage >= 0.5)
+      .sort(
+        (a, b) =>
+          b.sepCoverage - a.sepCoverage ||
+          Math.abs(b.test.t) - Math.abs(a.test.t) ||
+          a.key.localeCompare(b.key) ||
+          a.condition.localeCompare(b.condition),
+      );
+    selected = eligible.length ? eligible[0] : null;
+  } else {
+    const eligible = marked
+      .filter((c) => Math.abs(c.test.t) >= FACTOR_T_MIN)
+      .sort(
+        (a, b) =>
+          Math.abs(b.test.t) - Math.abs(a.test.t) ||
+          a.key.localeCompare(b.key) ||
+          a.condition.localeCompare(b.condition),
+      );
+    selected = eligible.length ? eligible[0] : null;
   }
 
-  const candidates = detectFactorCandidates(lowPeeled.kept, highPeeled.kept);
+  // 6. The call - a category, never a coefficient.
+  const catById = new Map(cats.categories.map((c) => [c.id, c]));
+  let call: DaveCall = "even";
+  let selectedCategory: DaveCategory | null = null;
+  if (!sameMeans && selected) {
+    const state = selected.holds(upcoming[selected.key]);
+    if (state === true) {
+      selectedCategory = catById.get(selected.marksCategory) ?? null;
+    } else if (state === false) {
+      selectedCategory =
+        selected.marks === "high" ? cats.lowPopulation : cats.highPopulation;
+    }
+    if (selectedCategory) call = selectedCategory.id;
+  }
 
-  // Strongest factor first; the first whose condition is known for the
-  // upcoming game sets P. When none is known, P falls to his even-split
-  // floor: the balanced average of the two half means (a definitional
-  // rule — see module doc 4). Categorisation happens downstream.
-  const applied =
-    candidates.find((f) => f.holds(upcoming[f.key]) !== undefined) ?? null;
-  const p = applied ? (applied.holds(upcoming[applied.key]) ? 1 : 0) : 0.5;
-  const shown = applied ?? candidates[0] ?? null;
+  // 7. The projection targets the CATEGORY mean.
+  const highPopulationMean = cats.highPopulation.mean;
+  const lowPopulationMean = cats.lowPopulation.mean;
+  const allScores = [...lowScores, ...highScores];
+  let projection: number;
+  let variance: number;
+  if (sameMeans) {
+    // "if they are, you project using the raw average of the two samples"
+    projection = mean(allScores);
+    variance = sampleVariance(allScores);
+  } else if (selectedCategory) {
+    projection = selectedCategory.mean;
+    variance = sampleVariance(
+      selectedCategory.indices.map((i) => games[i].score),
+    );
+  } else {
+    // "half high half low = total projection" over the population means.
+    projection = (highPopulationMean + lowPopulationMean) / 2;
+    const varHigh = sampleVariance(
+      cats.highPopulation.indices.map((i) => games[i].score),
+    );
+    const varLow = sampleVariance(
+      cats.lowPopulation.indices.map((i) => games[i].score),
+    );
+    variance =
+      0.25 * varHigh +
+      0.25 * varLow +
+      0.25 * Math.pow(highPopulationMean - lowPopulationMean, 2);
+  }
+  const halfWidth = Z90 * Math.sqrt(variance);
+
+  // The shape of each half: a property, never a gate.
+  const shape = {
+    high: {
+      ...rawShape(highScores),
+      verdict: (highSide.isMultimodal ? "multimodal" : "single population") as
+        | "single population"
+        | "multimodal",
+      thresholds: highSide.thresholds,
+    },
+    low: {
+      ...rawShape(lowScores),
+      verdict: (lowSide.isMultimodal ? "multimodal" : "single population") as
+        | "single population"
+        | "multimodal",
+      thresholds: lowSide.thresholds,
+    },
+  };
+
+  const separated = [...highSide.separated, ...lowSide.separated]
+    .map((e) => e.index)
+    .sort((a, b) => a - b);
 
   return {
-    ...build(p),
-    factor: shown ? shown.key : null,
-    factorDetail: shown
-      ? {
-          condition: shown.condition,
-          highFraction: shown.highFraction,
-          lowFraction: shown.lowFraction,
-        }
-      : null,
-    factors: candidates,
-    p,
+    projection,
+    low90: projection - halfWidth,
+    high90: projection + halfWidth,
+    highMean,
+    lowMean,
+    highPopulationMean,
+    lowPopulationMean,
+    call,
+    factor: selected && !sameMeans ? selected.key : null,
+    factorCondition: selected && !sameMeans ? selected.condition : null,
+    factors: marked,
+    sameMeans,
+    sameMeansTest,
+    shape,
+    categories: cats.categories,
+    separated,
+    cut: split.cut,
+    halvesT: halves.t,
+    halvesDf: halves.df,
+    sameMeansT: halves.t,
+    sameMeansDf: halves.df,
+    sameMeansP: sameMeansTest.p,
+    nHigh: highScores.length,
+    nLow: lowScores.length,
+    highVar: sampleVariance(highScores),
+    lowVar: sampleVariance(lowScores),
   };
 }
 
 
 // ---------------------------------------------------------------------------
-// Breakpoints — regime leads (see module doc 8)
+// Breakpoints - regime leads (unchanged)
 // ---------------------------------------------------------------------------
 
-/** Named regime rules for detectBreakpoints (see module doc 8). */
+/** Named regime rules for detectBreakpoints. */
 export const BREAKPOINT_RULES = {
   /** A single-game move of at least this many DK points is a big swing. */
   swingPoints: 15,
@@ -608,8 +1097,7 @@ export const BREAKPOINT_RULES = {
   meanGap: 6,
   /** Two-sample t floor for the level-shift check. */
   shiftT: 2.0,
-  /** How many indices to skip after a flagged level shift (no re-flagging
-   *  consecutive windows of one shift). */
+  /** How many indices to skip after a flagged level shift. */
   cooldown: 5,
 } as const;
 

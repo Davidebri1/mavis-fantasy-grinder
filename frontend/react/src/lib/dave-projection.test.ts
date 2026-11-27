@@ -2,9 +2,13 @@ import { describe, it, expect } from "vitest";
 
 import {
   BREAKPOINT_RULES,
+  cutOf,
   detectBreakpoints,
+  detectHumps,
   projectDave,
+  tPValue,
   welchT,
+  type DaveProjection,
   type GameLog,
 } from "./dave-projection";
 
@@ -17,9 +21,7 @@ function games(rows: [number, Record<string, boolean | number | string>][]): Gam
   }));
 }
 
-/** Clean boom/bust: low half [2,4,4,6], high half [18,20,20,22], all high
- *  games at home, all low games away. Medians split cleanly (ties at 4 and
- *  20 stay inside their halves). */
+/** A clean two-population player: every home game is a high game. */
 const BOOM_BUST: [number, Record<string, boolean | number | string>][] = [
   [2, { isHome: false }],
   [4, { isHome: false }],
@@ -31,11 +33,81 @@ const BOOM_BUST: [number, Record<string, boolean | number | string>][] = [
   [22, { isHome: true }],
 ];
 
+/** A multimodal player: the high half carries a boom hump of four games. */
+const MULTIMODAL: [number, Record<string, boolean | number | string>][] = [
+  [2, { isHome: false }],
+  [3, { isHome: false }],
+  [4, { isHome: false }],
+  [4, { isHome: false }],
+  [5, { isHome: false }],
+  [5, { isHome: false }],
+  [6, { isHome: false }],
+  [7, { isHome: false }],
+  [8, { isHome: false }],
+  [9, { isHome: false }],
+  [19, { isHome: false }],
+  [19, { isHome: false }],
+  [20, { isHome: false }],
+  [20, { isHome: false }],
+  [20, { isHome: false }],
+  [20, { isHome: false }],
+  [30, { isHome: true }],
+  [30, { isHome: true }],
+  [31, { isHome: true }],
+  [45, { isHome: true }],
+];
+
+/** The engine's hand-worked same-means case: Welch t = 2.03 < 2.1. */
+const FLAT: [number, Record<string, boolean | number | string>][] = [
+  [0, { isHome: false }],
+  [2, { isHome: false }],
+  [14, { isHome: false }],
+  [16, { isHome: false }],
+  [16, { isHome: true }],
+  [16.2, { isHome: true }],
+  [16.4, { isHome: true }],
+  [16.6, { isHome: true }],
+];
+
+const CAREER: [number, Record<string, boolean | number | string>][] = [
+  [10, { team: "NE" }],
+  [11, { team: "NE" }],
+  [12, { team: "NE" }],
+  [11, { team: "NE" }],
+  [10, { team: "NE" }],
+  [12, { team: "NE" }],
+  [3, { team: "GB" }],
+  [2, { team: "GB" }],
+  [4, { team: "GB" }],
+  [1, { team: "GB" }],
+  [2, { team: "GB" }],
+  [3, { team: "GB" }],
+  [2, { team: "GB" }],
+  [1, { team: "GB" }],
+];
+
+/** Every game lands in exactly one category, and the ranges tile the scores. */
+function expectTiling(r: DaveProjection, logs: GameLog[]): void {
+  const total = r.categories.reduce((a, c) => a + c.n, 0);
+  expect(total).toBe(logs.length);
+  for (const log of logs) {
+    const hits = r.categories.filter(
+      (c) =>
+        (c.lo === null || log.score >= c.lo) &&
+        (c.hi === null || log.score < c.hi),
+    );
+    expect(hits.length).toBe(1);
+  }
+  // The categories are sorted and their ranges meet without a gap.
+  for (let i = 1; i < r.categories.length; i++) {
+    expect(r.categories[i].lo).toBe(r.categories[i - 1].hi);
+  }
+}
+
 describe("welchT (hand-computed)", () => {
   it("matches the hand-worked two-sample result", () => {
     // [18,20,20,22] vs [2,4,4,6]: both variances 8/3, so
-    // t = 16 / sqrt(8/12 + 8/12) = 16 / (2/sqrt(3)) = 8*sqrt(3) = 13.856...
-    // df = (4/3)^2 / (2 * (2/3)^2 / 3) = 6.
+    // t = 16 / sqrt(8/12 + 8/12) = 8*sqrt(3) = 13.856...
     const { t, df } = welchT([18, 20, 20, 22], [2, 4, 4, 6]);
     expect(t).toBeCloseTo(13.8564, 3);
     expect(df).toBeCloseTo(6, 5);
@@ -47,307 +119,168 @@ describe("welchT (hand-computed)", () => {
   });
 });
 
-describe("projectDave — clean boom/bust separation", () => {
-  it("splits at the median and finds home/away as the factor", () => {
+describe("tPValue (two-sided)", () => {
+  it("matches known values", () => {
+    // Checked against an independent numerical integration of the Student-t
+    // tail: t=2.5, df=10 -> 0.0314468442; t=1.0, df=20 -> 0.3292565787.
+    expect(tPValue(2.5, 10)).toBeCloseTo(0.0314468442, 8);
+    expect(tPValue(1.0, 20)).toBeCloseTo(0.3292565787, 8);
+    expect(tPValue(0, 10)).toBeCloseTo(1, 8);
+  });
+
+  it("returns null when the test cannot be computed", () => {
+    expect(tPValue(NaN, 10)).toBeNull();
+    expect(tPValue(2, 0)).toBeNull();
+  });
+});
+
+describe("detectHumps (the peaks that don't belong)", () => {
+  it("finds two humps and the valley between them", () => {
+    const r = detectHumps([19, 19, 20, 20, 20, 20, 30, 30, 31, 45]);
+    expect(r.peaks.length).toBe(2);
+    expect(r.thresholds.length).toBe(1);
+    expect(r.thresholds[0]).toBeCloseTo(22.5, 6);
+  });
+
+  it("finds no threshold in a single hump", () => {
+    const r = detectHumps([10, 11, 12, 12, 13, 14, 15]);
+    expect(r.peaks.length).toBe(1);
+    expect(r.thresholds.length).toBe(0);
+  });
+
+  it("finds nothing in two isolated spikes", () => {
+    const r = detectHumps([10, 10, 12, 12, 14, 14, 40]);
+    expect(r.peaks.length).toBe(0);
+    expect(r.thresholds.length).toBe(0);
+  });
+});
+
+describe("projectDave - the categorical call", () => {
+  it("calls the high category when the factor's state is known and holds", () => {
     const r = projectDave(games(BOOM_BUST), { isHome: true });
+    expect(r.call).toBe("high");
+    expect(r.factor).toBe("isHome");
+    expect(r.factorCondition).toBe("isHome=true");
+    expect(r.projection).toBeCloseTo(r.highPopulationMean, 10);
     expect(r.highMean).toBeCloseTo(20, 10);
     expect(r.lowMean).toBeCloseTo(4, 10);
-    expect(r.factor).toBe("isHome");
     expect(r.sameMeans).toBe(false);
-    expect(r.peeled).toEqual([]);
-    expect(r.p).toBe(1);
   });
 
-  it("P = 1 projects the high mean; P = 0 the low mean (his home-game example)", () => {
-    const home = projectDave(games(BOOM_BUST), { isHome: true });
-    expect(home.projection).toBeCloseTo(20, 10);
-
-    const away = projectDave(games(BOOM_BUST), { isHome: false });
-    expect(away.projection).toBeCloseTo(4, 10);
-    expect(away.p).toBe(0);
+  it("calls the low category when the factor's state is known and does not hold", () => {
+    const r = projectDave(games(BOOM_BUST), { isHome: false });
+    expect(r.call).toBe("low");
+    expect(r.projection).toBeCloseTo(r.lowPopulationMean, 10);
+    expect(r.projection).toBeCloseTo(4, 10);
   });
 
-  it("handles the inverted direction: away games are the high games", () => {
-    const rows: [number, Record<string, boolean | number | string>][] = [
-      [2, { isHome: true }],
-      [4, { isHome: true }],
-      [4, { isHome: true }],
-      [6, { isHome: true }],
-      [18, { isHome: false }],
-      [20, { isHome: false }],
-      [20, { isHome: false }],
-      [22, { isHome: false }],
-    ];
-    // The high side's condition is isHome = false.
-    const away = projectDave(games(rows), { isHome: false });
-    expect(away.factor).toBe("isHome");
-    expect(away.p).toBe(1);
-    expect(away.projection).toBeCloseTo(20, 10);
-
-    const home = projectDave(games(rows), { isHome: true });
-    expect(home.p).toBe(0);
-    expect(home.projection).toBeCloseTo(4, 10);
-  });
-
-  it("detects a numeric factor and applies the midpoint rule", () => {
-    const rows: [number, Record<string, boolean | number | string>][] = [
-      [2, { passAttempts: 20, isHome: false }],
-      [4, { passAttempts: 22, isHome: true }],
-      [4, { passAttempts: 21, isHome: false }],
-      [6, { passAttempts: 23, isHome: true }],
-      [18, { passAttempts: 40, isHome: true }],
-      [20, { passAttempts: 42, isHome: false }],
-      [20, { passAttempts: 41, isHome: true }],
-      [22, { passAttempts: 43, isHome: false }],
-    ];
-    // isHome is mixed (separation 0), passAttempts separates fully.
-    const r = projectDave(games(rows), { passAttempts: 41 });
-    expect(r.factor).toBe("passAttempts");
-    expect(r.p).toBe(1); // 41 is above the midpoint 31.5
-    expect(r.projection).toBeCloseTo(20, 10);
-
-    const low = projectDave(games(rows), { passAttempts: 22 });
-    expect(low.p).toBe(0);
-    expect(low.projection).toBeCloseTo(4, 10);
-  });
-
-  it("detects a categorical factor (month)", () => {
-    const rows: [number, Record<string, boolean | number | string>][] = [
-      [2, { month: "September" }],
-      [4, { month: "September" }],
-      [4, { month: "September" }],
-      [6, { month: "September" }],
-      [18, { month: "December" }],
-      [20, { month: "December" }],
-      [20, { month: "December" }],
-      [22, { month: "December" }],
-    ];
-    const r = projectDave(games(rows), { month: "December" });
-    expect(r.factor).toBe("month");
-    expect(r.p).toBe(1);
-    expect(r.projection).toBeCloseTo(20, 10);
-  });
-});
-
-describe("projectDave — the even-split floor (P = 0.5)", () => {
-  it("uses P = 0.5 when the upcoming factor condition is unknown", () => {
+  it("falls to the even floor when the factor's state is unknown", () => {
     const r = projectDave(games(BOOM_BUST), {});
-    expect(r.factor).toBe("isHome"); // still detected
-    expect(r.p).toBe(0.5);
+    expect(r.call).toBe("even");
+    expect(r.projection).toBeCloseTo((r.highPopulationMean + r.lowPopulationMean) / 2, 10);
     expect(r.projection).toBeCloseTo(12, 10);
   });
 
-  it("hand-checks the 90% interval at P = 0.5", () => {
-    // var = 0.25*(8/3) + 0.25*(8/3) + 0.25*(16)^2 = 4/3 + 64 = 65.3333
-    // sd = 8.0829, half width = 1.6449 * 8.0829 = 13.2957
-    const r = projectDave(games(BOOM_BUST), {});
-    expect(r.low90).toBeCloseTo(12 - 13.2957, 3);
-    expect(r.high90).toBeCloseTo(12 + 13.2957, 3);
+  it("never exposes a coefficient", () => {
+    const r = projectDave(games(BOOM_BUST), { isHome: true }) as unknown as Record<string, unknown>;
+    expect("p" in r).toBe(false);
+    expect("peeled" in r).toBe(false);
+    expect("normality" in r).toBe(false);
+    expect(JSON.stringify(r)).not.toContain("P=1");
+    expect(JSON.stringify(r)).not.toContain("P=0");
   });
 
-  it("uses P = 0.5 when nothing separates the halves", () => {
-    // isHome mixed in both halves, no other factors.
-    const rows: [number, Record<string, boolean | number | string>][] = [
-      [2, { isHome: false }],
-      [4, { isHome: true }],
-      [4, { isHome: false }],
-      [6, { isHome: true }],
-      [18, { isHome: false }],
-      [20, { isHome: true }],
-      [20, { isHome: false }],
-      [22, { isHome: true }],
-    ];
-    const r = projectDave(games(rows), { isHome: true });
-    expect(r.factor).toBeNull();
-    expect(r.p).toBe(0.5);
-    expect(r.projection).toBeCloseTo(12, 10);
+  it("reports the sameness test separately from the projection", () => {
+    const r = projectDave(games(BOOM_BUST), { isHome: true });
+    expect(r.sameMeansTest).not.toBeNull();
+    expect(r.sameMeansTest!.t).toBeCloseTo(13.8564, 3);
+    expect(r.sameMeansTest!.df).toBeCloseTo(6, 4);
+    expect(r.sameMeansTest!.p).toBeLessThan(0.001);
   });
 });
 
-describe("projectDave — same halves -> raw average", () => {
+describe("projectDave - multimodal data", () => {
+  it("separates the hump and calls it", () => {
+    const logs = games(MULTIMODAL);
+    const r = projectDave(logs, { isHome: true });
+    expect(r.shape.high.verdict).toBe("multimodal");
+    expect(r.shape.low.verdict).toBe("single population");
+    expect(r.separated.length).toBe(4);
+    const ids = r.categories.map((c) => c.id).sort();
+    expect(ids).toEqual(["high-normal", "high-outlier", "low"]);
+  });
+
+  it("makes the boom reachable: the high call returns the hump's mean", () => {
+    const r = projectDave(games(MULTIMODAL), { isHome: true });
+    expect(r.call).toBe("high-outlier");
+    const boom = r.categories.find((c) => c.id === "high-outlier");
+    expect(boom).toBeDefined();
+    expect(r.projection).toBeCloseTo(boom!.mean, 10);
+    expect(r.projection).toBeGreaterThan(r.highMean);
+  });
+
+  it("calls the low population when the factor does not hold", () => {
+    const r = projectDave(games(MULTIMODAL), { isHome: false });
+    expect(r.call).toBe("low");
+    expect(r.projection).toBeCloseTo(r.lowPopulationMean, 10);
+  });
+
+  it("uses the population means for the even floor", () => {
+    const r = projectDave(games(MULTIMODAL), {});
+    expect(r.call).toBe("even");
+    expect(r.projection).toBeCloseTo((r.highPopulationMean + r.lowPopulationMean) / 2, 10);
+    expect(r.highPopulationMean).toBeLessThan(r.highMean);
+  });
+
+  it("keeps every game in exactly one category and tiles the ranges", () => {
+    const logs = games(MULTIMODAL);
+    expectTiling(projectDave(logs, { isHome: true }), logs);
+  });
+});
+
+describe("projectDave - the same-means path", () => {
   it("projects the raw average when Welch says the halves are one population", () => {
-    // Sorted scores [0, 2, 14, 16 | 16, 16.2, 16.4, 16.6]: both halves pass
-    // the skew/kurtosis test, and Welch's t = 8.3 / 4.0845 = 2.03 < 2.1.
-    const rows: [number, Record<string, boolean | number | string>][] = [
-      [0, { isHome: false }],
-      [2, { isHome: false }],
-      [14, { isHome: false }],
-      [16, { isHome: false }],
-      [16, { isHome: true }],
-      [16.2, { isHome: true }],
-      [16.4, { isHome: true }],
-      [16.6, { isHome: true }],
-    ];
-    const r = projectDave(games(rows), { isHome: true });
+    const logs = games(FLAT);
+    const r = projectDave(logs, { isHome: true });
     expect(r.sameMeans).toBe(true);
-    expect(r.p).toBe(0.5);
+    expect(r.call).toBe("even");
     expect(r.factor).toBeNull();
-    // Raw average of all eight games: (0+2+14+16+16+16.2+16.4+16.6) / 8.
     expect(r.projection).toBeCloseTo(97.2 / 8, 10);
-  });
-
-  it("projects the raw average for a truly flat player", () => {
-    const rows: [number, Record<string, boolean | number | string>][] =
-      new Array(8).fill(null).map(() => [10, { isHome: false }]);
-    const r = projectDave(games(rows), { isHome: true });
-    expect(r.sameMeans).toBe(true);
-    expect(r.projection).toBe(10);
+    expectTiling(r, logs);
   });
 });
 
-describe("projectDave — normality and peeling", () => {
-  it("peels the multimodal outlier from a non-normal half and reports it", () => {
-    // High half [18,19,20,45] has skew 1.14 > 1; peeling 45 leaves the
-    // symmetric [18,19,20] (skew 0, kurt -1.5). The 45 sits at index 7.
-    const rows: [number, Record<string, boolean | number | string>][] = [
-      [2, {}],
-      [4, {}],
-      [4, {}],
-      [6, {}],
-      [18, {}],
-      [19, {}],
-      [20, {}],
-      [45, {}],
-    ];
-    const r = projectDave(games(rows), {});
-    expect(r.peeled).toEqual([7]);
-    expect(r.normality.high).toBe(true);
-    expect(r.highMean).toBeCloseTo(19, 10);
-    expect(r.lowMean).toBeCloseTo(4, 10);
-    // No factors at all -> even-split floor over the post-peel means.
-    expect(r.p).toBe(0.5);
-    expect(r.projection).toBeCloseTo(11.5, 10);
-  });
-
-  it("does not peel a normal half", () => {
-    const r = projectDave(games(BOOM_BUST), { isHome: true });
-    expect(r.peeled).toEqual([]);
-    expect(r.normality.high).toBe(true);
-    expect(r.normality.low).toBe(true);
-  });
-});
-
-describe("projectDave — interval sanity", () => {
-  it("always contains the projection, and widens with P = 0.5 uncertainty", () => {
-    const certain = projectDave(games(BOOM_BUST), { isHome: true });
-    expect(certain.low90).toBeLessThanOrEqual(certain.projection);
-    expect(certain.high90).toBeGreaterThanOrEqual(certain.projection);
-
-    const uncertain = projectDave(games(BOOM_BUST), {});
-    expect(uncertain.high90 - uncertain.low90).toBeGreaterThan(
-      certain.high90 - certain.low90,
-    );
-  });
-
-  it("hand-checks the 90% interval at P = 1", () => {
-    // var = 1*(8/3) + 0 + 0 = 8/3, sd = 1.6330, half width = 2.6859
-    const r = projectDave(games(BOOM_BUST), { isHome: true });
-    expect(r.low90).toBeCloseTo(20 - 2.6859, 3);
-    expect(r.high90).toBeCloseTo(20 + 2.6859, 3);
-  });
-});
-
-describe("projectDave — guards", () => {
+describe("projectDave - guards and invariants", () => {
   it("refuses fewer than 4 games", () => {
-    expect(() => projectDave(games([[10, {}], [12, {}], [8, {}]]))).toThrow(
-      /at least 4/,
-    );
+    expect(() => projectDave(games([[10, {}], [12, {}], [8, {}]]))).toThrow(/at least 4/);
+  });
+
+  it("tiles the categories for the clean fixture too", () => {
+    const logs = games(BOOM_BUST);
+    expectTiling(projectDave(logs, { isHome: true }), logs);
+  });
+
+  it("reports the cut as the largest score in the low half", () => {
+    const r = projectDave(games(BOOM_BUST), { isHome: true });
+    expect(r.cut).toBe(6);
+    expect(cutOf([2, 4, 4, 6, 18, 20, 20, 22])).toBe(6);
+    expect(cutOf([1, 2, 3])).toBe(2);
+  });
+
+  it("keeps the interval around the projection, never as its bound", () => {
+    const r = projectDave(games(MULTIMODAL), { isHome: true });
+    expect(r.low90).toBeLessThan(r.projection);
+    expect(r.high90).toBeGreaterThan(r.projection);
   });
 });
 
-describe("projectDave — multiple factors, ranked and gated", () => {
-  // isHome splits the halves cleanly (t = 13.8564, the hand-worked case);
-  // restDays is a real but weaker second contrast: its midpoint is 6.125,
-  // and the with-group scores [18,20,22] (mean 20) vs without [2,4,4,6,20]
-  // (mean 7.2) gives t = 12.8 / 3.4597 = 3.70.
-  const rows: [number, Record<string, boolean | number | string>][] = [
-    [2, { isHome: false, restDays: 3 }],
-    [4, { isHome: false, restDays: 4 }],
-    [4, { isHome: false, restDays: 3 }],
-    [6, { isHome: false, restDays: 2 }],
-    [18, { isHome: true, restDays: 10 }],
-    [20, { isHome: true, restDays: 2 }],
-    [20, { isHome: true, restDays: 11 }],
-    [22, { isHome: true, restDays: 13 }],
-  ];
-
-  it("reports every factor that clears the two-sample t-test, strongest first", () => {
-    const r = projectDave(games(rows), { isHome: true });
-    expect(r.factors.length).toBe(2);
-    expect(r.factors[0].key).toBe("isHome");
-    expect(r.factors[0].test.t).toBeCloseTo(13.8564, 3);
-    expect(r.factors[0].test.df).toBeCloseTo(6, 5);
-    expect(r.factors[1].key).toBe("restDays");
-    expect(Math.abs(r.factors[1].test.t)).toBeCloseTo(3.6991541800939984, 5);
-    // The stronger factor drives P and the projection.
-    expect(r.p).toBe(1);
-    expect(r.projection).toBeCloseTo(20, 10);
-    expect(r.factors.length).toBe(2);
-    expect(r.factor).toBe("isHome");
-  });
-
-  it("falls back to the next factor when the strongest condition is unknown", () => {
-    const r = projectDave(games(rows), { restDays: 12 });
-    expect(r.factor).toBe("restDays"); // midpoint 6.125 -> 12 holds
-    expect(r.p).toBe(1);
-    expect(r.projection).toBeCloseTo(20, 10);
-
-    const low = projectDave(games(rows), { restDays: 3 });
-    expect(low.p).toBe(0);
-    expect(low.projection).toBeCloseTo(4, 10);
-  });
-
-  it("keeps the even-split floor when no condition is known, and still reports the top factor", () => {
-    const r = projectDave(games(rows), {});
-    expect(r.factor).toBe("isHome"); // reported, even though nothing set P
-    expect(r.p).toBe(0.5);
-    expect(r.projection).toBeCloseTo(12, 10);
-  });
-
-  it("rejects a factor below the evidence floor (|t| < 2)", () => {
-    // isHome is perfectly mixed so its two-sample t is ~0.3: no factor may
-    // set P, and the candidate list is empty.
-    const mixed: [number, Record<string, boolean | number | string>][] = [
-      [2, { isHome: true }], [4, { isHome: true }], [4, { isHome: false }], [6, { isHome: false }],
-      [18, { isHome: true }], [20, { isHome: true }], [20, { isHome: false }], [22, { isHome: true }],
-    ];
-    const r = projectDave(games(mixed), { isHome: true });
-    expect(r.factors).toEqual([]);
-    expect(r.p).toBe(0.5);
-    expect(r.projection).toBeCloseTo(12, 10);
-  });
-});
-
-describe("detectBreakpoints — regime leads", () => {
+describe("detectBreakpoints - regime leads", () => {
   it("flags a team change with its dates", () => {
-    const rows: [number, Record<string, boolean | number | string>][] = [
-      [10, { team: "NE" }],
-      [10, { team: "NE" }],
-      [11, { team: "NE" }],
-      [10, { team: "NE" }],
-      [10, { team: "GB" }],
-      [10, { team: "GB" }],
-      [11, { team: "GB" }],
-      [10, { team: "GB" }],
-    ];
-    const built = games(rows);
+    const built = games(CAREER);
     const flags = detectBreakpoints(built).filter((f) => f.kind === "team change");
     expect(flags.length).toBe(1);
-    expect(flags[0].date).toBe(built[4].date);
-    expect(flags[0].priorDate).toBe(built[3].date);
+    expect(flags[0].date).toBe(built[6].date);
     expect(flags[0].detail).toContain("NE to GB");
-  });
-
-  it("flags a big single-game swing in both directions", () => {
-    const rows: [number, Record<string, boolean | number | string>][] = [
-      [10, {}], [10, {}], [10, {}], [30, {}], [10, {}],
-    ];
-    const built = games(rows);
-    const flags = detectBreakpoints(built).filter((f) => f.kind === "big swing");
-    expect(flags.length).toBe(2);
-    expect(flags[0].date).toBe(built[3].date);
-    expect(flags[1].date).toBe(built[4].date);
-    expect(BREAKPOINT_RULES.swingPoints).toBe(15);
   });
 
   it("flags a level shift once, with the two-sample t between the windows", () => {
@@ -358,9 +291,11 @@ describe("detectBreakpoints — regime leads", () => {
     const built = games(rows);
     const flags = detectBreakpoints(built).filter((f) => f.kind === "level shift");
     expect(flags.length).toBe(1);
-    expect(flags[0].date).toBe(built[5].date);
     expect(flags[0].detail).toContain("18.40 to 4.40");
-    expect(flags[0].detail).toContain("t=-40.41");
+  });
+
+  it("keeps the named rules", () => {
+    expect(BREAKPOINT_RULES.swingPoints).toBe(15);
+    expect(BREAKPOINT_RULES.window).toBe(5);
   });
 });
-

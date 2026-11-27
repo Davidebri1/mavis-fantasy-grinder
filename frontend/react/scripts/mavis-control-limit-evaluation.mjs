@@ -1,3 +1,25 @@
+/* ===========================================================================
+ * SUPERSEDED - 2026-11-26 (mavis)
+ *
+ * This script belongs to the evaluation framing Dave rejected on 2026-11-26:
+ * factors and clusters were accepted or rejected, a coefficient was reported
+ * as a variable ("P=1"), a p value was printed beside a hit rate, and the
+ * framing measured pooled data against control-limit bands.
+ *
+ * The rejection was of the framing, not of this file. The file stays in the
+ * repository as a dated record of that method and is not part of the current
+ * evaluation.
+ *
+ * Its input is pinned to the pre-correction CSV so it still runs against the
+ * data it was written for. The current method is:
+ *   scripts/mavis-categorical-evaluation.mjs   - the analysis
+ *   scripts/mavis-categorical-charts.mjs       - the charts
+ *   docs/mavis-categorical-evaluation.md       - the write-up
+ *
+ * Point it at another file with MAVIS_PRE_CSV, or MAVIS_PRE_JSON where the
+ * input is the harness JSON.
+ * =========================================================================== */
+
 // mavis-control-limit-evaluation.mjs
 // Built by mavis, 2026-11-17.
 //
@@ -16,7 +38,7 @@
 //     R: where the projection sits in the band against where the actual
 //     landed, and whether the call points at the right control limit.
 //
-// Reads:  .tmp-audit/projection-evaluation.csv
+// Reads:  .tmp-audit/projection-evaluation-pre-correction.csv
 // Writes: .tmp-audit/projection-control-limits.json
 //
 // Rebuild from frontend/react:  node scripts/mavis-control-limit-evaluation.mjs
@@ -27,7 +49,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const csvPath = path.join(root, ".tmp-audit", "projection-evaluation.csv");
+const csvPath = process.env.MAVIS_PRE_CSV || path.join(root, ".tmp-audit", "projection-evaluation-pre-correction.csv");
 const outPath = path.join(root, ".tmp-audit", "projection-control-limits.json");
 
 // ---------------------------------------------------------------- csv reader

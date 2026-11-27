@@ -1,124 +1,41 @@
 #!/usr/bin/env node
 /**
- * mavis-projection-evaluation.mjs — walk-forward evaluation of Dave's
- * projection model against a plain baseline on real DraftKings-point
- * actuals. Built by mavis for Dave. Supersedes
- * scripts/mavis-accuracy-history.mjs (its proven ESPN fetch layer is
- * reused here verbatim) and docs/mavis-accuracy-history.md (superseded by
- * docs/mavis-projection-evaluation.md).
+ * mavis-projection-evaluation.mjs - walk-forward evaluation of Dave's
+ * projection model on real DraftKings-point actuals. Built by mavis for Dave.
+ * Supersedes scripts/mavis-accuracy-history.mjs (its proven ESPN fetch layer
+ * is reused here verbatim).
  *
- * The engine is src/lib/dave-projection.ts; this script runs its
- * bare-Node mirror scripts/dave-port.mjs (parity-tested in
- * scripts/dave-port.test.mjs). The engine supplies the median split, the
- * halves, outlier peeling, the ranked factor list with its two-sample
- * t-tests, and the sameness test. The harness applies the owner's
+ * The engine is src/lib/dave-projection.ts; this script runs its bare-Node
+ * mirror scripts/dave-port.mjs (parity-tested in scripts/dave-port.test.mjs).
+ * The engine supplies the median split, the two populations, the separated
+ * hump inside a population, the categories, the ranked factor list with its
+ * two-sample t-tests, and the sameness test. The harness applies the owner's
  * evaluation spec on top of that.
  *
  * -------------------------------------------------------------------------
- * DEFINITIONS (authoritative — mirrored in docs/mavis-projection-evaluation.md)
+ * DEFINITIONS (authoritative - the JSON's "definitions" block repeats these
+ * word for word; the two are diffed by dev/mavis-definition-parity.mjs)
  * -------------------------------------------------------------------------
- *
- * GAME OF RECORD
- *   One completed game for one player in the dataset (ESPN box score,
- *   scored with DraftKings' published rubric). Every game of record is
- *   written to the CSV. Nothing is omitted.
- *
- * FIRST GAME OF RECORD
- *   A player's first game in the dataset. It has no earlier games, so no
- *   cut and no projection exist for it. It is recorded as information
- *   ("first game of record"), not silence.
- *
- * EARLIER GAMES / EARLIER_N
- *   For a target game: that player's completed games whose date is
- *   STRICTLY before the target game's date, all seasons, sorted by date.
- *   earlier_n is their count.
- *
- * CUT (C) - LOGISTICS, NOT A FINDING
- *   The earlier games are split in half at the median: sorted ascending,
- *   the LOW half takes the first ceil(n/2) games (an odd count puts the
- *   middle game in the LOW half). C = the largest value in the LOW half.
- *   This is how the two halves are formed. It is a means, not a result:
- *   it is never reported as a rate, and it is NOT the definition of a
- *   boom.
- *
- * CONTROL LIMITS
- *   The mean of the LOW half is the LOWER control limit; the mean of the
- *   HIGH half is the UPPER control limit (post-peel, the engine's own
- *   numbers). The CONTROL LIMIT RANGE R = upper - lower is the width of
- *   the band. Good players have tight limits, inconsistent players have
- *   wide ones. R is the yardstick: every comparison below is measured in
- *   units of R.
- *
- * HIGH SCORING GAME (the parent term)
- *   A game whose DK points are above that player's own average of the
- *   earlier games. Every boom is a high scoring game; a high scoring
- *   game is not necessarily a boom. Words are not interchangeable: the
- *   child inherits from the parent, it never contradicts it.
- *
- * BOOM = OUTLIER HIGH, BUST = OUTLIER LOW
- *   A boom is a high scoring game that breaks ABOVE the upper control
- *   limit. A bust is the mirror: below the lower control limit. Games
- *   between the limits are inside the band. These are the peaks that
- *   don't belong - the outliers his document separates out - so the
- *   definition is a child of "high scoring", never a contradiction of it.
- *
- * BAND POSITION (the unit everything is measured in)
- *   (value - lower limit) / R. The actual's position is below 0 on a
- *   bust, above 1 on a boom, inside 0..1 otherwise. The model's position
- *   is where its projection sits in the band; the baseline's is where its
- *   plain average sits.
- *
- * BASELINE
- *   The plain prior-games average (arithmetic mean of the earlier games;
- *   no split, no factor, no weighting, no outlier removal). It is scored
- *   in the same band units as the model.
- *
- * P (the owner's rule, as the engine runs it)
- *   The probability that the winning factor's high-side condition holds
- *   for the UPCOMING game: 1 when the condition holds, 0 when it does
- *   not, and the even-split floor (0.5) when no factor's state is known
- *   for that game. The projection is high mean x P + low mean x (1 - P)
- *   - his document's formula.
- *
- * MODEL PATHS
- *   - factor:            a factor cleared the evidence floor (|t| >= 2)
- *                        and its state is known for the upcoming game;
- *                        P = 1 or 0 accordingly, formula applied.
- *   - raw average:       the two halves are the same population (Welch
- *                        two-sample t, |t| < 2.1); the projection is the
- *                        raw average of the earlier games - his document's
- *                        definitional rule.
- *   - even-split floor:  no factor's state is known for this game; P =
- *                        0.5 and the projection is the balanced average of
- *                        the two half means - his definitional floor.
- *   - no control limits: earlier_n < 4 - too few games to split into
- *                        halves, so his method has no control limits and
- *                        no projection yet. The row is recorded (nothing
- *                        is omitted) and is not scored.
- *
- * LOW-SAMPLE ASTERISK
- *   Every game with earlier_n >= 1 gets a projection. Games with
- *   earlier_n < 30 are flagged in sample_flag ("low sample (n=12)") —
- *   the projection is still issued and still recorded. The 30-game line
- *   is the Central Limit Theorem threshold the owner set; rows below it
- *   are asterisked, never dropped.
- *
- * CONTAINMENT (supporting line)
- *   For evaluations with an interval (earlier_n >= 4): same when the
- *   actual DK points fall inside the model's 90% interval, different
- *   otherwise. Never called a "miss".
- *
- * FACTORS FED (all known before kickoff, all objective)
- *   isHome (boolean), month (categorical), opponent (categorical: the
- *   opposing team's abbreviation), restDays (numeric: days since that
- *   player's previous game of record), regimeShifts (numeric: the number
- *   of level-shift breakpoints recorded for the player strictly before
- *   that game — the feedable form of the regime flag; breakpoints
- *   themselves are leads, not firings).
- *
- * NOT FEEDABLE TODAY (listed in the doc, never faked)
- *   Receiver availability / injuries, snap counts and targets (in-game),
- *   weather, betting lines, coaching changes — reasons in the doc.
+ * gameOfRecord: One completed game for one player in the dataset (ESPN box score, scored with DraftKings' published rubric). Every game of record is written to the CSV. Nothing is omitted.
+ * firstGameOfRecord: A player's first game in the dataset. It has no earlier games, so no cut, no categories and no projection exist for it. It is recorded as information, not silence.
+ * earlierGames: For a target game: that player's completed games whose date is STRICTLY before the target game's date, all seasons, sorted by date. earlier_n is their count.
+ * cut: CUT - LOGISTICS, NOT A FINDING. The earlier games are split in half at the median: sorted ascending, the LOW half takes the first ceil(n/2) games (an odd count puts the middle game in the LOW half). For a row with two populations the cut is the score boundary between them: the midpoint between the largest score in the LOW half and the smallest score in the HIGH half, or the largest score in the LOW half when the two halves meet at the same score. For a row with fewer than 4 completed games (no populations yet) it is the median-split value of the earlier games. The cut can be decided any way you like - it is how the populations are formed; it is never reported as a rate and it is NOT the definition of a boom.
+ * highGame: HIGH GAME - the upper population. A game whose DK points fall in the high half of the player's earlier games, at or above the cut. A population is NEVER called a boom.
+ * lowGame: LOW GAME - the lower population. A game whose DK points fall in the low half of the player's earlier games, below the cut.
+ * boom: BOOM - a genuine outlier beyond the upper limit. The actual fell in the separated category on the HIGH side AND that separated category sits ABOVE the high side's main body. Every boom is a high game; not every high game is a boom.
+ * bust: BUST - the mirror of boom. The actual fell in the separated category on the LOW side AND that separated category sits BELOW the low side's main body.
+ * call: THE CALL - categorical, never a coefficient. It names the category the projection represents: high, high-outlier, high-normal, low, low-outlier, low-normal, or even. The probability was external and is turned into a constant - a given - so the model inherits a resolved constant, not a variable.
+ * evenFloor: THE FLOOR - even. When no factor's state is known for the upcoming game, the projection is the even split between the high and low populations: half the high population mean + half the low population mean. "half high half low = total projection".
+ * sameness: SAMENESS - the only accept/reject in the model. Welch's two-sample t-test on the two halves: when the halves are one population, the call is even and the projection is the raw average of all the earlier games. Nothing else in this model is accepted or rejected.
+ * factors: FACTORS - a categorization, not a set of verdicts. A factor condition is a common thread through a separated population, or the condition that separates the two populations. Every candidate is reported with its two-sample t-test, its df and its p-value. No factor is accepted, rejected, passed or failed.
+ * categories: CATEGORIES - every earlier game falls in exactly one category, and the categories tile the score space exactly once: high, high-outlier, high-normal, low, low-outlier, low-normal. The category ranges are half-open [lo, hi), null = unbounded. Nothing gets dropped as a miss: every possible outcome has a category.
+ * actualCategory: ACTUAL CATEGORY - the id of the category the actual DK points fall in, decided at full precision against the engine's category ranges. It is the fact the owner's one metric is scored on: did the projection equal the actual on this day.
+ * outcomeClass: OUTCOME CLASS - the same fact in the owner's words: boom, bust, high game or low game.
+ * largestCategory: LARGEST CATEGORY - the category holding the most of the player's earlier games at that point; ties go to the higher-scoring category. It is the player's own no-skill reference: a predictor with no information about the outcome scores the rate of days on which the actual landed in this category.
+ * baseline: BASELINE - the plain prior-games average (arithmetic mean of the earlier games; no split, no factor, no weighting, no outlier removal), recorded in the data as the no-factor comparator.
+ * lowSampleAsterisk: LOW-SAMPLE ASTERISK - every game with at least 1 earlier game is evaluated; games under the low-sample threshold (30 by default, set by MAVIS_LOW_SAMPLE_N) are flagged in sample_flag and are still evaluated. The 30-game line is the Central Limit Theorem threshold; rows below it are asterisked, never dropped.
+ * factorFeed: FACTORS FED (all known before kickoff, all objective) - isHome (boolean), month (categorical), team (categorical), opponent (categorical), restDays (numeric: days since that player's previous game of record), regimeShifts (numeric: the number of level-shift breakpoints recorded for the player strictly before that game).
+ * notFeedable: NOT FEEDABLE TODAY (listed, never faked) - receiver availability and injuries, snap counts and targets (in-game), weather, betting lines, coaching changes.
  *
  * USAGE
  *   node scripts/mavis-projection-evaluation.mjs
@@ -134,14 +51,18 @@ import {
   projectDave,
   detectBreakpoints,
   cutOf,
-  mean,
-  sampleVariance,
-  Z90,
 } from "./dave-port.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const OUT_CSV = join(HERE, "..", ".tmp-audit", "projection-evaluation.csv");
-const OUT_JSON = join(HERE, "..", ".tmp-audit", "projection-evaluation.json");
+const OUT_CSV = process.env.MAVIS_OUT_CSV
+  ? join(process.env.MAVIS_OUT_CSV)
+  : join(HERE, "..", ".tmp-audit", "projection-evaluation.csv");
+const OUT_JSON = process.env.MAVIS_OUT_JSON
+  ? join(process.env.MAVIS_OUT_JSON)
+  : join(HERE, "..", ".tmp-audit", "projection-evaluation.json");
+const PRE_CSV = process.env.MAVIS_PRE_CSV
+  ? join(process.env.MAVIS_PRE_CSV)
+  : join(HERE, "..", ".tmp-audit", "projection-evaluation-pre-correction.csv");
 const CACHE_DIR = process.env.MAVIS_CACHE_DIR
   ? join(process.env.MAVIS_CACHE_DIR)
   : join(tmpdir(), "mavis-accuracy-cache");
@@ -165,8 +86,34 @@ const ERAS = [
   { label: "2021-2026", from: 2021, to: 2026 },
 ];
 
+// The definitions, repeated word for word from the comment block above.
+// dev/mavis-definition-parity.mjs diffs this object against the comment
+// block in this file and against the JSON's "definitions" block.
+const DEFINITIONS = {
+  gameOfRecord: "One completed game for one player in the dataset (ESPN box score, scored with DraftKings' published rubric). Every game of record is written to the CSV. Nothing is omitted.",
+  firstGameOfRecord: "A player's first game in the dataset. It has no earlier games, so no cut, no categories and no projection exist for it. It is recorded as information, not silence.",
+  earlierGames: "For a target game: that player's completed games whose date is STRICTLY before the target game's date, all seasons, sorted by date. earlier_n is their count.",
+  cut: "CUT - LOGISTICS, NOT A FINDING. The earlier games are split in half at the median: sorted ascending, the LOW half takes the first ceil(n/2) games (an odd count puts the middle game in the LOW half). For a row with two populations the cut is the score boundary between them: the midpoint between the largest score in the LOW half and the smallest score in the HIGH half, or the largest score in the LOW half when the two halves meet at the same score. For a row with fewer than 4 completed games (no populations yet) it is the median-split value of the earlier games. The cut can be decided any way you like - it is how the populations are formed; it is never reported as a rate and it is NOT the definition of a boom.",
+  highGame: "HIGH GAME - the upper population. A game whose DK points fall in the high half of the player's earlier games, at or above the cut. A population is NEVER called a boom.",
+  lowGame: "LOW GAME - the lower population. A game whose DK points fall in the low half of the player's earlier games, below the cut.",
+  boom: "BOOM - a genuine outlier beyond the upper limit. The actual fell in the separated category on the HIGH side AND that separated category sits ABOVE the high side's main body. Every boom is a high game; not every high game is a boom.",
+  bust: "BUST - the mirror of boom. The actual fell in the separated category on the LOW side AND that separated category sits BELOW the low side's main body.",
+  call: "THE CALL - categorical, never a coefficient. It names the category the projection represents: high, high-outlier, high-normal, low, low-outlier, low-normal, or even. The probability was external and is turned into a constant - a given - so the model inherits a resolved constant, not a variable.",
+  evenFloor: "THE FLOOR - even. When no factor's state is known for the upcoming game, the projection is the even split between the high and low populations: half the high population mean + half the low population mean. \"half high half low = total projection\".",
+  sameness: "SAMENESS - the only accept/reject in the model. Welch's two-sample t-test on the two halves: when the halves are one population, the call is even and the projection is the raw average of all the earlier games. Nothing else in this model is accepted or rejected.",
+  factors: "FACTORS - a categorization, not a set of verdicts. A factor condition is a common thread through a separated population, or the condition that separates the two populations. Every candidate is reported with its two-sample t-test, its df and its p-value. No factor is accepted, rejected, passed or failed.",
+  categories: "CATEGORIES - every earlier game falls in exactly one category, and the categories tile the score space exactly once: high, high-outlier, high-normal, low, low-outlier, low-normal. The category ranges are half-open [lo, hi), null = unbounded. Nothing gets dropped as a miss: every possible outcome has a category.",
+  actualCategory: "ACTUAL CATEGORY - the id of the category the actual DK points fall in, decided at full precision against the engine's category ranges. It is the fact the owner's one metric is scored on: did the projection equal the actual on this day.",
+  outcomeClass: "OUTCOME CLASS - the same fact in the owner's words: boom, bust, high game or low game.",
+  largestCategory: "LARGEST CATEGORY - the category holding the most of the player's earlier games at that point; ties go to the higher-scoring category. It is the player's own no-skill reference: a predictor with no information about the outcome scores the rate of days on which the actual landed in this category.",
+  baseline: "BASELINE - the plain prior-games average (arithmetic mean of the earlier games; no split, no factor, no weighting, no outlier removal), recorded in the data as the no-factor comparator.",
+  lowSampleAsterisk: "LOW-SAMPLE ASTERISK - every game with at least 1 earlier game is evaluated; games under the low-sample threshold (30 by default, set by MAVIS_LOW_SAMPLE_N) are flagged in sample_flag and are still evaluated. The 30-game line is the Central Limit Theorem threshold; rows below it are asterisked, never dropped.",
+  factorFeed: "FACTORS FED (all known before kickoff, all objective) - isHome (boolean), month (categorical), team (categorical), opponent (categorical), restDays (numeric: days since that player's previous game of record), regimeShifts (numeric: the number of level-shift breakpoints recorded for the player strictly before that game).",
+  notFeedable: "NOT FEEDABLE TODAY (listed, never faked) - receiver availability and injuries, snap counts and targets (in-game), weather, betting lines, coaching changes.",
+};
+
 // ---------------------------------------------------------------------------
-// ESPN fetch layer — reused verbatim from the proven
+// ESPN fetch layer - reused verbatim from the proven
 // scripts/mavis-accuracy-history.mjs (team schedule -> event summary ->
 // DraftKings points per player).
 // ---------------------------------------------------------------------------
@@ -301,43 +248,195 @@ function harvestSummary(sum, date, season) {
 // Formatting helpers
 // ---------------------------------------------------------------------------
 
+/** The arithmetic mean. Same semantics as the engine's private helper. */
+function mean(xs) {
+  return xs.reduce((a, b) => a + b, 0) / xs.length;
+}
+
+/** Sample variance (n - 1 denominator). A single game has no spread. */
+function sampleVariance(xs) {
+  if (xs.length < 2) return 0;
+  const m = mean(xs);
+  return xs.reduce((a, b) => a + (b - m) * (b - m), 0) / (xs.length - 1);
+}
+
 const round = (x) => (Number.isFinite(x) ? Math.round(x * 100) / 100 : null);
 const round4 = (x) => (Number.isFinite(x) ? Math.round(x * 10000) / 10000 : null);
-// The numbers that feed a verdict are written at 12 decimals so the CSV
-// reproduces its own labels: anyone recomputing a containment or a
-// direction from these columns gets the same answer as the stored verdict.
+// The numbers that feed a category are written at 12 decimals so the CSV
+// reproduces its own labels: anyone recomputing the category of an actual
+// from these columns gets the same answer as the stored category.
 const round12 = (x) => (Number.isFinite(x) ? Math.round(x * 1e12) / 1e12 : null);
-// The midpoint tolerance. The even-split floor, and the raw average when
-// the two halves are the same size, both land on the band midpoint;
-// floating point puts them a hair either side of it. A projection at the
-// midpoint points at neither control limit - it makes no call.
-const MIDPOINT_EPS = 1e-9;
-const snapMidpoint = (pos) =>
-  pos === null || pos === undefined ? null
-  : Math.abs(pos - 0.5) <= MIDPOINT_EPS ? 0.5 : pos;
-// The direction verdict at full precision. Band position 0 is the lower
-// control limit, 0.5 the midpoint, 1 the upper limit.
-const directionOf = (pos) =>
-  pos === null || pos === undefined ? ""
-  : Math.abs(pos - 0.5) <= MIDPOINT_EPS ? "no call"
-  : pos > 0.5 ? "up" : "down";
-// The limit tolerance. A game that lands exactly ON a control limit does
-// not break it - it is inside the band. Floating point puts such a tie a
-// hair either side of the line, so the comparison carries a tolerance and
-// every reader of the CSV uses the same one.
-const LIMIT_EPS = 1e-9;
-const outcomeClassOf = (actual, lower, upper) =>
-  actual > upper + LIMIT_EPS ? "boom (outlier high)"
-  : actual < lower - LIMIT_EPS ? "bust (outlier low)"
-  : "inside the band";
-const containedOf = (actual, low90, high90) =>
-  actual >= low90 - LIMIT_EPS && actual <= high90 + LIMIT_EPS ? "same" : "different";
+// A compact number for the prose: no trailing zeros, no exponential form.
+const fmt = (x) => {
+  if (!Number.isFinite(x)) return "";
+  const r = Math.round(x * 10000) / 10000;
+  return String(r);
+};
 const pct = (k, n) => (n ? Math.round((k / n) * 1000) / 10 : null);
 
 function csvEscape(v) {
   if (v === null || v === undefined) return "";
   const s = String(v);
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+/** Parse one CSV line (quoted fields, doubled quotes). */
+function parseCsvLine(line) {
+  const out = [];
+  let cur = "";
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = false;
+      } else cur += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === ",") { out.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// The categories, as the owner names them
+// ---------------------------------------------------------------------------
+
+/** The half-open range of one category: [lo, hi), null = unbounded. */
+function rangeText(c) {
+  const lo = c.lo === null ? "-inf" : fmt(c.lo);
+  const hi = c.hi === null ? "inf" : fmt(c.hi);
+  return "[" + lo + "," + hi + ")";
+}
+
+/** The compact readable summary of every category in one row. */
+function categoriesText(cats) {
+  return cats
+    .map((c) => c.id + " " + rangeText(c) + " n=" + c.n + " mean=" + fmt(c.mean))
+    .join(" | ");
+}
+
+/** The score boundary between the low and high categories. */
+function boundaryOf(cats) {
+  const los = cats.filter((c) => c.side === "high").map((c) => c.lo).filter((v) => v !== null);
+  return los.length ? Math.min(...los) : null;
+}
+
+/** The category the value falls in. The ranges tile the score space once. */
+function categoryOf(cats, value) {
+  for (const c of cats) {
+    const loOk = c.lo === null || value >= c.lo;
+    const hiOk = c.hi === null || value < c.hi;
+    if (loOk && hiOk) return c;
+  }
+  return null;
+}
+
+/**
+ * The outcome class in the owner's words.
+ * A boom is the separated category on the HIGH side that sits ABOVE the
+ * high side's main body; a bust is the mirror on the LOW side.
+ */
+function outcomeClassOf(cats, actualCat) {
+  if (!actualCat) return "no populations yet (n<4)";
+  if (actualCat.id === "high-outlier") {
+    const main = cats.find((c) => c.id === "high-normal" || c.id === "high");
+    const sepLo = actualCat.lo === null ? -Infinity : actualCat.lo;
+    const mainLo = main && main.lo !== null ? main.lo : -Infinity;
+    if (sepLo > mainLo) return "boom";
+  }
+  if (actualCat.id === "low-outlier") {
+    const main = cats.find((c) => c.id === "low-normal" || c.id === "low");
+    const sepHi = actualCat.hi === null ? Infinity : actualCat.hi;
+    const mainHi = main && main.hi !== null ? main.hi : Infinity;
+    if (sepHi < mainHi) return "bust";
+  }
+  return actualCat.side === "high" ? "high game" : "low game";
+}
+
+/**
+ * The biggest category the player had at that point. Ties go to the
+ * higher-scoring category - fixed before the actual is known.
+ */
+function largestCategoryOf(cats) {
+  let best = null;
+  for (const c of cats) {
+    if (!best || c.n > best.n || (c.n === best.n && c.mean > best.mean)) best = c;
+  }
+  return best ? best.id : "";
+}
+
+/** The p-value of the factor the engine actually used, matched on key AND condition. */
+function factorPOf(proj) {
+  if (!proj.factor) return null;
+  const f = proj.factors.find(
+    (x) => x.key === proj.factor && x.condition === proj.factorCondition,
+  );
+  return f && f.test ? f.test.p : null;
+}
+
+/**
+ * The row's prose truth: what the engine did and why. It names the call, the
+ * factor and its condition or the even-split floor, and it names the
+ * sameness state. No coefficient, no probability label.
+ */
+function justificationFor(proj, actualCat, outcomeClass, factorEntry) {
+  const parts = [];
+  if (proj.sameMeans) {
+    parts.push(
+      "the two halves are one population (Welch two-sample t-test t=" + fmt(proj.sameMeansT) +
+      ", df=" + fmt(proj.sameMeansDf) + ", p-value " + fmt(proj.sameMeansP) + ")" +
+      " -> the call is even and the projection is the raw average of all " +
+      (proj.nHigh + proj.nLow) + " earlier games",
+    );
+  } else if (factorEntry && factorEntry.state !== null) {
+    parts.push(
+      "factor " + factorEntry.key + " - " + factorEntry.condition + " " +
+      (factorEntry.state ? "holds" : "does not hold") + " for this game" +
+      " (Welch two-sample t-test t=" + fmt(factorEntry.test.t) +
+      ", df=" + fmt(factorEntry.test.df) + ", p-value " + fmt(factorEntry.test.p) +
+      "; the games where it holds average " + fmt(factorEntry.test.withMean) + " over n=" +
+      factorEntry.test.withN + " and the games where it does not average " +
+      fmt(factorEntry.test.withoutMean) + " over n=" + factorEntry.test.withoutN + ")" +
+      " -> the call is " + proj.call + " and the projection is that category's mean",
+    );
+  } else if (factorEntry) {
+    parts.push(
+      "factor " + factorEntry.key + " - " + factorEntry.condition +
+      " has no known state for this game" +
+      " (Welch two-sample t-test t=" + fmt(factorEntry.test.t) +
+      ", df=" + fmt(factorEntry.test.df) + ", p-value " + fmt(factorEntry.test.p) + ")" +
+      " -> the even-split floor: half the high population mean + half the low population mean",
+    );
+  } else {
+    parts.push(
+      "no candidate factor reached |t| >= 2 -> the even-split floor: half the high population mean + half the low population mean",
+    );
+  }
+  parts.push(
+    "the high half averages " + fmt(proj.highMean) + " over n=" + proj.nHigh +
+    " and the low half averages " + fmt(proj.lowMean) + " over n=" + proj.nLow,
+  );
+  if (proj.shape.high.verdict === "multimodal") {
+    const sep = proj.categories.find((c) => c.id === "high-outlier");
+    parts.push(
+      "the high half is multimodal - a separated group of n=" + (sep ? sep.n : 0) +
+      " averaging " + (sep ? fmt(sep.mean) : "n/a") + " sits apart from its main body",
+    );
+  }
+  if (proj.shape.low.verdict === "multimodal") {
+    const sep = proj.categories.find((c) => c.id === "low-outlier");
+    parts.push(
+      "the low half is multimodal - a separated group of n=" + (sep ? sep.n : 0) +
+      " averaging " + (sep ? fmt(sep.mean) : "n/a") + " sits apart from its main body",
+    );
+  }
+  if (actualCat) {
+    parts.push("the actual fell in the category " + actualCat.id + " - " + outcomeClass);
+  }
+  return parts.join("; ");
 }
 
 // ---------------------------------------------------------------------------
@@ -349,6 +448,29 @@ async function main() {
   console.log("mavis-projection-evaluation: teams=" + TEAMS.join(",") +
     " seasons=" + SEASON_START + ".." + SEASON_END +
     " lowSampleN=" + LOW_SAMPLE_N);
+
+  // ---- 0. the previous run's actuals, kept as ground truth ---------------
+  let preActuals = null;
+  let preMalformed = 0;
+  if (existsSync(PRE_CSV)) {
+    const lines = readFileSync(PRE_CSV, "utf8").split("\n");
+    const header = parseCsvLine(lines[0].replace(/\r$/, ""));
+    const idxAid = header.indexOf("athlete_id");
+    const idxDate = header.indexOf("date");
+    const idxAct = header.indexOf("actual_dk_points");
+    preActuals = new Map();
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].replace(/\r$/, "");
+      if (!line) continue;
+      const f = parseCsvLine(line);
+      if (f.length !== header.length) { preMalformed++; continue; }
+      preActuals.set(f[idxAid] + "|" + f[idxDate], Number(f[idxAct]));
+    }
+    console.log("Previous run's actuals loaded for comparison: " + preActuals.size +
+      " rows (malformed lines: " + preMalformed + ")");
+  } else {
+    console.log("No pre-correction CSV found - the actuals comparison is skipped.");
+  }
 
   // ---- 1. schedules (only fetched when the cache is cold or refreshed) ---
   mkdirSync(CACHE_DIR, { recursive: true });
@@ -427,78 +549,116 @@ async function main() {
   }
   console.log("Distinct players with DK-relevant games: " + logs.size);
 
+  // full-career chart data for this player (before logs are released)
+  const careers = new Map(); // athlete_id -> the player's whole career, in date order
+  for (const [id, games] of logs) {
+    careers.set(id, {
+      player: games[0].name, position: games[0].pos,
+      teams: [...new Set(games.map((g) => g.team))].join("/"),
+      games: games.length,
+      span: games[0].date.slice(0, 10) + " to " + games[games.length - 1].date.slice(0, 10),
+      scores: games.map((g) => g.score),
+      dates: games.map((g) => g.date),
+      ordered: games,
+      flags: detectBreakpoints(
+        games.map((g) => ({ date: g.date, score: g.score, factors: { team: g.team } })),
+      ),
+    });
+  }
+  // release the logs before aggregation
+  const playersSeen = logs.size;
+  logs.clear();
+
   // ---- 4. walk-forward evaluation: EVERY game recorded --------------------
   const CSV_HEADER = [
     "player", "athlete_id", "position", "team", "opponent", "date", "season",
     "status", "earlier_n", "sample_flag", "cut", "actual_dk_points",
-    "control_low", "control_high", "control_range",
-    "outcome_class", "actual_band_position",
-    "model_path", "model_factor", "model_factor_condition",
-    "model_factor_t", "model_factor_df", "model_P",
-    "model_projection", "model_band_position", "model_direction",
-    "model_low90", "model_high90", "model_contained",
-    "baseline_projection", "baseline_band_position", "baseline_direction",
-    "peeled_high", "peeled_low", "justification",
+    "actual_category", "outcome_class",
+    "model_call", "model_largest_category",
+    "model_projection", "model_low90", "model_high90",
+    "model_high_mean", "model_low_mean",
+    "model_high_population_mean", "model_low_population_mean",
+    "model_high_outlier_mean", "model_high_outlier_n",
+    "model_low_outlier_mean", "model_low_outlier_n",
+    "model_same_means", "model_same_means_p",
+    "model_factor", "model_factor_condition", "model_factor_p",
+    "model_shape_high", "model_shape_low", "model_categories",
+    "baseline_projection", "baseline_call", "justification",
   ];
+  if (CSV_HEADER.length !== 38) {
+    throw new Error("The CSV header must carry 38 columns; got " + CSV_HEADER.length);
+  }
   const csvLines = [CSV_HEADER.join(",")];
   const evalRows = []; // compact per-evaluation records for aggregation
-  const careers = new Map(); // athlete_id -> full-career chart data
+  const actualsByKey = new Map(); // athlete_id|date -> the actual DK points
   let firstGames = 0;
 
-  for (const [id, games] of logs) {
-    const name = games[0].name;
-    for (let k = 0; k < games.length; k++) {
-      const target = games[k];
-      const earlier = games.slice(0, k);
+  for (const [id, games] of careers) {
+    // the games in date order (the careers map keeps them sorted)
+    const ordered = games.ordered;
+    const name = games.player;
+    for (let k = 0; k < ordered.length; k++) {
+      const target = ordered[k];
+      const earlier = ordered.slice(0, k);
       const n = earlier.length;
+
+      const rowObj = {
+        player: name, athlete_id: id, position: target.pos, team: target.team,
+        opponent: target.opponent ?? "", date: target.date, season: target.season,
+        status: "evaluation", earlier_n: n, sample_flag: "",
+        cut: "", actual_dk_points: round12(target.score),
+        actual_category: "", outcome_class: "",
+        model_call: "", model_largest_category: "",
+        model_projection: "", model_low90: "", model_high90: "",
+        model_high_mean: "", model_low_mean: "",
+        model_high_population_mean: "", model_low_population_mean: "",
+        model_high_outlier_mean: "", model_high_outlier_n: "",
+        model_low_outlier_mean: "", model_low_outlier_n: "",
+        model_same_means: "", model_same_means_p: "",
+        model_factor: "", model_factor_condition: "", model_factor_p: "",
+        model_shape_high: "", model_shape_low: "",
+        model_categories: "", baseline_projection: "", baseline_call: "",
+        justification: "",
+      };
+      actualsByKey.set(id + "|" + target.date, { score: target.score, player: name, date: target.date });
 
       if (n === 0) {
         firstGames++;
-        const rowObj = {
-          player: name, athlete_id: id, position: target.pos, team: target.team,
-          opponent: target.opponent ?? "", date: target.date, season: target.season,
-          status: "first game of record", earlier_n: 0,
-          sample_flag: "first game of record (n=0)", actual_dk_points: round12(target.score),
-          justification:
-            "first game of record: no earlier games, so no cut and no projection exist for this game",
-        };
+        rowObj.status = "first game of record";
+        rowObj.sample_flag = "first game of record (n=0)";
+        rowObj.justification =
+          "first game of record: no earlier games, so no cut, no categories and no projection exist for this game";
         csvLines.push(CSV_HEADER.map((h) => csvEscape(rowObj[h])).join(","));
         continue;
       }
 
       const earlierScores = earlier.map((g) => g.score);
-      const cut = cutOf(earlierScores);
+      const medianSplit = cutOf(earlierScores);
       const actual = target.score;
       const sampleFlag = n < LOW_SAMPLE_N ? "low sample (n=" + n + ")" : "";
       const baseline = mean(earlierScores);
-
-      // regime flag: level-shift breakpoints recorded strictly before the
-      // target game (leads, not firings) — feedable as a count.
-      const shiftDates = detectBreakpoints(
-        earlier.map((g) => ({ date: g.date, score: g.score, factors: { team: g.team } })),
-      )
-        .filter((f) => f.kind === "level shift")
-        .map((f) => f.date);
-      const regimeFor = (date) => shiftDates.reduce((c, d) => (d <= date ? c + 1 : c), 0);
-
-      const rowObj = {
-        player: name, athlete_id: id, position: target.pos, team: target.team,
-        opponent: target.opponent ?? "", date: target.date, season: target.season,
-        status: "evaluation", earlier_n: n, sample_flag: sampleFlag,
-        cut: round(cut), actual_dk_points: round12(actual),
-        baseline_projection: round12(baseline),
-      };
+      rowObj.sample_flag = sampleFlag;
+      rowObj.cut = round(medianSplit);
+      rowObj.baseline_projection = round12(baseline);
+      rowObj.baseline_call = baseline > medianSplit ? "high" : "low";
 
       if (n < 4) {
-        // His method needs four completed games to form two halves, so
-        // there are no control limits yet and no projection to score.
-        // The row is recorded - nothing is omitted - and it is not scored.
-        rowObj.model_path = "no control limits yet (n<4)";
-        rowObj.model_projection = round(baseline);
-        rowObj.outcome_class = "no control limits yet (n<4)";
+        // His method needs four completed games to form two populations, so
+        // there are no categories and no projection to score. The row is
+        // recorded - nothing is omitted - and it is not scored.
+        rowObj.outcome_class = "no populations yet (n<4)";
         rowObj.justification =
-          "earlier_n=" + n + ": fewer than 4 completed games, so his method has no halves, no control limits and no projection yet; recorded as information, not scored";
+          "earlier_n=" + n + ": fewer than 4 completed games, so his method has no halves, no categories and no projection yet; recorded as information, not scored";
       } else {
+        // regime flag: level-shift breakpoints recorded strictly before the
+        // target game (leads, not firings) - feedable as a count.
+        const shiftDates = detectBreakpoints(
+          earlier.map((g) => ({ date: g.date, score: g.score, factors: { team: g.team } })),
+        )
+          .filter((f) => f.kind === "level shift")
+          .map((f) => f.date);
+        const regimeFor = (date) => shiftDates.reduce((c, d) => (d <= date ? c + 1 : c), 0);
+
         const earlierEng = earlier.map((g) => ({
           date: g.date, score: g.score,
           factors: {
@@ -514,146 +674,82 @@ async function main() {
         };
         const proj = projectDave(earlierEng, upcoming);
 
-        // The engine's own P, by his rule: 1 when the winning factor's
-        // high-side condition holds for the UPCOMING game, 0 when it does
-        // not, and the even-split floor when no factor's state is known.
-        const P = proj.p;
-        const projection = proj.projection;
+        const cats = proj.categories;
+        const boundary = boundaryOf(cats);
+        rowObj.cut = round(boundary);
+        rowObj.baseline_call = baseline > boundary ? "high" : "low";
+        const actualCat = categoryOf(cats, actual);
+        const outcomeClass = outcomeClassOf(cats, actualCat);
 
-        // The control limits: the two half means, post-peel.
-        const lowerCL = proj.lowMean;
-        const upperCL = proj.highMean;
-        const R = upperCL - lowerCL;
-        const bandPos = (v) => (R > 0 ? (v - lowerCL) / R : null);
-
-        if (proj.sameMeans) {
-          rowObj.model_path = "raw average (halves one population)";
-          rowObj.model_factor_condition =
-            "halves are one population (two-sample t-test t=" +
-            round(proj.halvesT) + ", df=" + round(proj.halvesDf) +
-            ") -> raw average of all earlier games, his document's definitional rule";
-          rowObj.model_factor_t = round(proj.halvesT);
-          rowObj.model_factor_df = round(proj.halvesDf);
-        } else if (P !== 0.5) {
-          const f = proj.factors.find((x) => x.key === proj.factor);
-          rowObj.model_path = "factor";
-          rowObj.model_factor = proj.factor ?? "";
-          rowObj.model_factor_condition =
-            (f ? f.condition : proj.factor ?? "") +
-            " (two-sample t-test t=" + round(f ? f.test.t : null) +
-            ", df=" + round(f ? f.test.df : null) +
-            "; scores average " + round(f ? f.test.withMean : null) + " in n=" +
-            (f ? f.test.withN : "?") + " games when the condition holds vs " +
-            round(f ? f.test.withoutMean : null) + " in n=" +
-            (f ? f.test.withoutN : "?") + " games when it does not)" +
-            "; P=" + P + " (the condition " + (P === 1 ? "holds" : "does not hold") +
-            " for the upcoming game - his rule)";
-          rowObj.model_factor_t = round(f ? f.test.t : null);
-          rowObj.model_factor_df = round(f ? f.test.df : null);
-        } else {
-          const f0 = proj.factors[0];
-          rowObj.model_path = "even-split floor (no factor's state known for this game)";
-          rowObj.model_factor_condition = f0
-            ? "strongest candidate factor " + f0.key + " (" + f0.condition +
-              ", two-sample t-test t=" + round(f0.test.t) + ", df=" + round(f0.test.df) +
-              ") has no known state for the upcoming game -> even-split floor, his document's definitional rule"
-            : "no candidate factor reached |t| >= 2 -> even-split floor, his document's definitional rule";
-          if (f0) {
-            rowObj.model_factor = f0.key;
-            rowObj.model_factor_t = round(f0.test.t);
-            rowObj.model_factor_df = round(f0.test.df);
-          }
-        }
-        rowObj.model_P = round4(P);
-        rowObj.control_low = round12(lowerCL);
-        rowObj.control_high = round12(upperCL);
-        rowObj.control_range = round12(R);
-        rowObj.model_projection = round12(projection);
-        rowObj.model_band_position = bandPos(projection) === null ? "" : round12(snapMidpoint(bandPos(projection)));
-        rowObj.baseline_band_position = bandPos(baseline) === null ? "" : round12(snapMidpoint(bandPos(baseline)));
-        rowObj.actual_band_position = bandPos(actual) === null ? "" : round12(snapMidpoint(bandPos(actual)));
-        // The verdicts are stored, not left to be recomputed from rounded
-        // columns: up / down / no call, decided at full precision.
-        rowObj.model_direction = directionOf(bandPos(projection));
-        rowObj.baseline_direction = directionOf(bandPos(baseline));
-        rowObj.outcome_class = outcomeClassOf(actual, lowerCL, upperCL);
-        // The engine's own 90% interval, at its own P.
+        rowObj.actual_category = actualCat ? actualCat.id : "";
+        rowObj.outcome_class = outcomeClass;
+        rowObj.model_call = proj.call;
+        rowObj.model_largest_category = largestCategoryOf(cats);
+        rowObj.model_projection = round12(proj.projection);
         rowObj.model_low90 = round12(proj.low90);
         rowObj.model_high90 = round12(proj.high90);
-        rowObj.model_contained = containedOf(actual, proj.low90, proj.high90);
+        rowObj.model_high_mean = round12(proj.highMean);
+        rowObj.model_low_mean = round12(proj.lowMean);
+        rowObj.model_high_population_mean = round12(proj.highPopulationMean);
+        rowObj.model_low_population_mean = round12(proj.lowPopulationMean);
+        const hOut = cats.find((c) => c.id === "high-outlier");
+        rowObj.model_high_outlier_mean = hOut ? round12(hOut.mean) : "";
+        rowObj.model_high_outlier_n = hOut ? hOut.n : "";
+        const lOut = cats.find((c) => c.id === "low-outlier");
+        rowObj.model_low_outlier_mean = lOut ? round12(lOut.mean) : "";
+        rowObj.model_low_outlier_n = lOut ? lOut.n : "";
+        rowObj.model_same_means = proj.sameMeans ? "true" : "false";
+        rowObj.model_same_means_p =
+          proj.sameMeansTest && proj.sameMeansTest.p !== null ? round12(proj.sameMeansTest.p) : "";
+        rowObj.model_factor = proj.factor ?? "";
+        rowObj.model_factor_condition = proj.factorCondition ?? "";
+        const fp = factorPOf(proj);
+        rowObj.model_factor_p = fp === null || fp === undefined ? "" : round12(fp);
+        rowObj.model_shape_high = proj.shape.high.verdict;
+        rowObj.model_shape_low = proj.shape.low.verdict;
+        rowObj.model_categories = categoriesText(cats);
 
-        // The peaks that don't belong: the outliers the engine separated out
-        // of the earlier games, counted by the half they came from. These
-        // are his own boom/bust identification inside the training data.
-        const sortedIdx = earlierEng
-          .map((g, i) => ({ i, score: g.score }))
-          .sort((a, b) => a.score - b.score);
-        const mid = Math.floor(sortedIdx.length / 2);
-        const lowEnd = sortedIdx.length % 2 === 0 ? mid : mid + 1;
-        const lowIdx = new Set(sortedIdx.slice(0, lowEnd).map((e) => e.i));
-        const peeled = proj.peeled ?? [];
-        rowObj.peeled_high = peeled.filter((i) => !lowIdx.has(i)).length;
-        rowObj.peeled_low = peeled.filter((i) => lowIdx.has(i)).length;
-      }
-
-      if (!rowObj.justification) {
-        rowObj.justification =
-          rowObj.model_path + (rowObj.model_factor_condition ? " — " + rowObj.model_factor_condition : "") +
-          "; control limits low " + round(rowObj.control_low) + " / high " + round(rowObj.control_high) +
-          " (control limit range R=" + round(rowObj.control_range) + " DK points)" +
-          "; projection " + round(rowObj.model_projection) +
-          " -> band position " + round4(rowObj.model_band_position) +
-          "; baseline " + round(rowObj.baseline_projection) +
-          " -> band position " + round4(rowObj.baseline_band_position) +
-          "; actual " + round(actual) +
-          " -> band position " + round4(rowObj.actual_band_position) +
-          " -> " + rowObj.outcome_class +
-          "; peaks separated out of the earlier games: " + rowObj.peeled_high +
-          " outlier high (boom), " + rowObj.peeled_low + " outlier low (bust)" +
-          (sampleFlag ? "; [" + sampleFlag + "]" : "");
+        // The factor the engine used, and whether its state is known for
+        // this game - the prose needs both.
+        let factorEntry = null;
+        if (proj.factor) {
+          const f = proj.factors.find(
+            (x) => x.key === proj.factor && x.condition === proj.factorCondition,
+          );
+          if (f) {
+            const state = f.holds(upcoming[proj.factor]);
+            factorEntry = {
+              key: f.key, condition: f.condition, test: f.test,
+              state: state === true ? true : state === false ? false : null,
+            };
+          }
+        }
+        rowObj.justification = justificationFor(proj, actualCat, outcomeClass, factorEntry);
+        if (sampleFlag) rowObj.justification += "; [" + sampleFlag + "]";
       }
 
       csvLines.push(CSV_HEADER.map((h) => csvEscape(rowObj[h])).join(","));
 
       evalRows.push({
         player: name, athlete_id: id, position: target.pos, team: target.team,
-        opponent: rowObj.opponent, date: target.date, season: target.season,
+        opponent: target.opponent ?? "", date: target.date, season: target.season,
         earlier_n: n, sampleFlag,
-        cut: round(cut),
-        lowerCL: rowObj.control_low ?? null,
-        upperCL: rowObj.control_high ?? null,
-        R: rowObj.control_range ?? null,
-        outcome: rowObj.outcome_class ?? "",
-        actualPos: rowObj.actual_band_position ?? null,
-        modelPos: rowObj.model_band_position ?? null,
-        baselinePos: rowObj.baseline_band_position ?? null,
-        factorCondition: rowObj.model_factor_condition ?? "",
-        modelPath: rowObj.model_path, factor: rowObj.model_factor ?? "",
-        P: rowObj.model_P ?? null,
-        contained: rowObj.model_contained ?? "",
-        actual: round(actual), projection: rowObj.model_projection,
-        low90: rowObj.model_low90 ?? "", high90: rowObj.model_high90 ?? "",
+        cut: rowObj.cut,
+        actual: round(actual),
+        actualCategory: rowObj.actual_category,
+        outcomeClass: rowObj.outcome_class,
+        call: rowObj.model_call,
+        largestCategory: rowObj.model_largest_category,
+        factor: rowObj.model_factor,
+        sameMeans: rowObj.model_same_means === "true",
+        categories: rowObj.model_categories,
+        shapeHigh: rowObj.model_shape_high,
+        shapeLow: rowObj.model_shape_low,
+        projection: rowObj.model_projection,
         baseline: rowObj.baseline_projection,
-        peeledHigh: rowObj.peeled_high ?? 0, peeledLow: rowObj.peeled_low ?? 0,
       });
     }
-
-    // full-career chart data for this player (before logs are released)
-    careers.set(id, {
-      player: name, position: games[0].pos,
-      teams: [...new Set(games.map((g) => g.team))].join("/"),
-      games: games.length,
-      span: games[0].date.slice(0, 10) + " to " + games[games.length - 1].date.slice(0, 10),
-      scores: games.map((g) => g.score),
-      dates: games.map((g) => g.date),
-      flags: detectBreakpoints(
-        games.map((g) => ({ date: g.date, score: g.score, factors: { team: g.team } })),
-      ),
-    });
   }
-  // release the logs before aggregation
-  const playersSeen = logs.size;
-  logs.clear();
 
   const evaluations = evalRows.length;
   if (evaluations === 0) throw new Error("No evaluations - nothing to report.");
@@ -662,169 +758,99 @@ async function main() {
     " | first games of record: " + firstGames);
 
   // ---- 5. aggregation -----------------------------------------------------
-  // Everything is measured in control-limit-range units (R). The split is
-  // logistics: it never appears as a rate.
-  const meanOf = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
-  const medianOf = (xs) => {
-    if (!xs.length) return null;
-    const s = [...xs].sort((a, b) => a - b);
-    const mid = Math.floor(s.length / 2);
-    return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-  };
-  const quantileOf = (xs, q) => {
-    if (!xs.length) return null;
-    const s = [...xs].sort((a, b) => a - b);
-    const pos = (s.length - 1) * q;
-    const lo = Math.floor(pos);
-    const hi = Math.ceil(pos);
-    return lo === hi ? s[lo] : s[lo] + (s[hi] - s[lo]) * (pos - lo);
-  };
-  const pearson = (xs, ys) => {
-    const n = xs.length;
-    if (n < 3) return null;
-    const mx = meanOf(xs);
-    const my = meanOf(ys);
-    let num = 0, dx = 0, dy = 0;
-    for (let i = 0; i < n; i++) {
-      const a = xs[i] - mx;
-      const b = ys[i] - my;
-      num += a * b; dx += a * a; dy += b * b;
-    }
-    return dx > 0 && dy > 0 ? num / Math.sqrt(dx * dy) : null;
-  };
-
-  const bandScope = (rows) => {
-    const scored = rows.filter(
-      (r) => r.R !== null && r.R > 0 && r.actualPos !== null && r.modelPos !== null,
-    );
-    const ranges = scored.map((r) => r.R);
-    const booms = scored.filter((r) => r.outcome === "boom (outlier high)");
-    const busts = scored.filter((r) => r.outcome === "bust (outlier low)");
-    const inside = scored.filter((r) => r.outcome === "inside the band");
-    const squaredError = (key) => {
-      let s = 0;
-      for (const r of scored) { const e = r.actualPos - r[key]; s += e * e; }
-      return scored.length ? s / scored.length : null;
-    };
-    const modelPos = scored.map((r) => r.modelPos);
-    const basePos = scored.map((r) => r.baselinePos);
-    const actualPos = scored.map((r) => r.actualPos);
-    // Only rows with a real band: a zero-width band (R = 0) cannot be
-    // placed in a band, so it is not part of the containment scope.
-    const withInterval = rows.filter((r) => r.contained !== "" && r.R !== null && r.R > 0);
-    const same = withInterval.filter((r) => r.contained === "same").length;
-    return {
+  // The censuses count what happened. Nothing is accepted or rejected here:
+  // sameness is the only accept/reject, and it is counted as a fact.
+  const scopeCensus = (rows) => {
+    const out = {
       evaluations: rows.length,
-      withControlLimits: scored.length,
+      calls: {},
+      sides: { high: 0, low: 0, even: 0 },
       outcomeClasses: {
-        boomOutlierHigh: booms.length,
-        bustOutlierLow: busts.length,
-        insideTheBand: inside.length,
+        boom: 0, bust: 0, "high game": 0, "low game": 0,
+        "no populations yet (n<4)": 0,
       },
-      controlLimitRange: {
-        mean: meanOf(ranges),
-        median: medianOf(ranges),
-        p10: quantileOf(ranges, 0.1),
-        p90: quantileOf(ranges, 0.9),
-      },
-      bandError: { model: squaredError("modelPos"), baseline: squaredError("baselinePos") },
-      bandCorrelation: {
-        model: pearson(modelPos, actualPos),
-        baseline: pearson(basePos, actualPos),
-      },
-      peaksSeparated: {
-        outlierHigh: rows.reduce((a, r) => a + (r.peeledHigh ?? 0), 0),
-        outlierLow: rows.reduce((a, r) => a + (r.peeledLow ?? 0), 0),
-      },
-      containment: {
-        evaluationsWithInterval: withInterval.length,
-        same,
-        different: withInterval.length - same,
-        rate: pct(same, withInterval.length),
-      },
+      onePopulation: 0,
+      twoPopulations: 0,
+      noCall: 0,
+      highMultimodal: 0,
+      lowMultimodal: 0,
     };
+    for (const r of rows) {
+      out.outcomeClasses[r.outcomeClass] = (out.outcomeClasses[r.outcomeClass] ?? 0) + 1;
+      if (r.shapeHigh === "multimodal") out.highMultimodal++;
+      if (r.shapeLow === "multimodal") out.lowMultimodal++;
+      if (!r.call) { out.noCall++; continue; }
+      out.calls[r.call] = (out.calls[r.call] ?? 0) + 1;
+      const side = r.call === "even" ? "even" : r.call.startsWith("high") ? "high" : "low";
+      out.sides[side]++;
+      if (r.sameMeans) out.onePopulation++; else out.twoPopulations++;
+    }
+    return out;
   };
 
-  // Does the projection point at the upper control limit when the game broke
-  // out, and at the lower limit when it broke down? The reference is each
-  // side's own pointing rate over the same rows - never a fixed line.
-  const directionScope = (rows) => {
-    const scored = rows.filter(
-      (r) => r.R !== null && r.R > 0 && r.actualPos !== null && r.modelPos !== null,
-    );
-    const boom = scored.filter((r) => r.outcome === "boom (outlier high)");
-    const bust = scored.filter((r) => r.outcome === "bust (outlier low)");
-    const excessOf = (r) => (r.actualPos > 1 ? r.actualPos - 1 : -r.actualPos);
-    const sideStats = (side) => {
-      const at = (r) => (side === "model" ? r.modelPos : r.baselinePos);
-      const pointsUp = (subset) => subset.filter((r) => at(r) > 0.5).length;
-      const pointsDown = (subset) => subset.filter((r) => at(r) < 0.5).length;
-      const meanExcess = (subset, keep) => {
-        const xs = subset.filter(keep).map(excessOf);
-        return xs.length ? meanOf(xs) : null;
-      };
-      const upOnBoom = (r) => at(r) > 0.5;
-      const downOnBust = (r) => at(r) < 0.5;
-      return {
-        rows: scored.length,
-        pointsUp: pointsUp(scored),
-        pointsDown: pointsDown(scored),
-        noCall: scored.length - pointsUp(scored) - pointsDown(scored),
-        boom: {
-          games: boom.length,
-          pointsUp: pointsUp(boom),
-          pointsDown: pointsDown(boom),
-          meanExcessWhenPointingUp: meanExcess(boom, upOnBoom),
-          meanExcessWhenPointingDown: meanExcess(boom, (r) => !upOnBoom(r)),
-        },
-        bust: {
-          games: bust.length,
-          pointsDown: pointsDown(bust),
-          pointsUp: pointsUp(bust),
-          meanExcessWhenPointingDown: meanExcess(bust, downOnBust),
-          meanExcessWhenPointingUp: meanExcess(bust, (r) => !downOnBust(r)),
-        },
-      };
-    };
-    return { model: sideStats("model"), baseline: sideStats("baseline") };
-  };
-
-  const perEra = ERAS.map((e) => {
-    const rows = evalRows.filter((r) => r.season >= e.from && r.season <= e.to);
-    return { era: e.label, ...bandScope(rows), direction: directionScope(rows) };
-  });
-
-  const perSeason = SEASONS.map((season) => ({
-    season,
-    ...bandScope(evalRows.filter((r) => r.season === season)),
-  }));
-
-  const overall = { ...bandScope(evalRows), direction: directionScope(evalRows) };
-
-  // model paths + factor usage (every count says what it counts)
-  const modelPaths = {
-    factor: evalRows.filter((r) => r.modelPath === "factor").length,
-    rawAverage: evalRows.filter((r) => r.modelPath.startsWith("raw average")).length,
-    evenSplitFloor: evalRows.filter((r) => r.modelPath.startsWith("even-split")).length,
-    noControlLimitsNLt4: evalRows.filter((r) => r.modelPath.startsWith("no control limits")).length,
-  };
+  const overall = scopeCensus(evalRows);
   const factorUsage = {};
   for (const r of evalRows) {
-    if (r.modelPath === "factor") factorUsage[r.factor] = (factorUsage[r.factor] ?? 0) + 1;
+    if (r.factor) factorUsage[r.factor] = (factorUsage[r.factor] ?? 0) + 1;
   }
-  // P as the engine runs it: 1 (the condition holds for the upcoming game),
-  // 0 (it does not), or the even-split floor (0.5) when no factor's state is
-  // known. The distribution is the report - there is no average to speak of.
-  const pCounts = { p1: 0, p0: 0, pFloor: 0 };
+  const perEra = ERAS.map((e) => ({
+    era: e.label,
+    ...scopeCensus(evalRows.filter((r) => r.season >= e.from && r.season <= e.to)),
+  }));
+  const perSeason = SEASONS.map((season) => ({
+    season,
+    ...scopeCensus(evalRows.filter((r) => r.season === season)),
+  }));
+
+  // per-player game counts
+  const perPlayer = new Map();
   for (const r of evalRows) {
-    const pv = Number(r.P);
-    if (!Number.isFinite(pv)) continue;
-    if (pv === 1) pCounts.p1++;
-    else if (pv === 0) pCounts.p0++;
-    else if (pv === 0.5) pCounts.pFloor++;
+    const e = perPlayer.get(r.athlete_id) ?? {
+      athlete_id: r.athlete_id, player: r.player, position: r.position,
+      evaluations: 0, firstGames: 0, lowSample: 0,
+    };
+    e.evaluations++;
+    if (r.earlier_n < LOW_SAMPLE_N) e.lowSample++;
+    perPlayer.set(r.athlete_id, e);
+  }
+  for (const c of careers.values()) {
+    const e = perPlayer.get(c.ordered[0].id);
+    if (e) e.firstGames = 1;
+  }
+  const perPlayerRows = [...perPlayer.values()].sort((a, b) => b.evaluations - a.evaluations);
+
+  // ---- 6. the actuals comparison against the previous run -----------------
+  let actualsCheck = null;
+  if (preActuals) {
+    let comparedRows = 0;
+    let differingRows = 0;
+    let missingRows = 0;
+    const examples = [];
+    const missingExamples = [];
+    for (const [key, rec] of actualsByKey) {
+      const val = rec.score;
+      if (!preActuals.has(key)) {
+        missingRows++;
+        if (missingExamples.length < 20) missingExamples.push({ key, player: rec.player, date: rec.date, current: val });
+        continue;
+      }
+      comparedRows++;
+      const prev = preActuals.get(key);
+      if (!Number.isFinite(prev) || Math.abs(prev - val) > 1e-9) {
+        differingRows++;
+        if (examples.length < 20) examples.push({ key, previous: prev, current: val });
+      }
+    }
+    actualsCheck = {
+      comparedRows, differingRows, missingRows, examples, missingExamples,
+      previousCsvRows: preActuals.size,
+      previousCsvMalformedLines: preMalformed,
+      newCsvRows: csvLines.length - 1,
+      note: "The actual DK points are re-derived from the same ESPN box scores; a difference here would mean the ground truth moved.",
+    };
   }
 
-  // ---- 6. exact ESPN positions for the audited population (best effort) ---
+  // ---- 7. exact ESPN positions for the audited population (best effort) ---
   const playerIds = [...new Set(evalRows.map((r) => r.athlete_id))];
   const positionOf = new Map();
   let posLookups = 0;
@@ -851,7 +877,7 @@ async function main() {
     positionMix.asPlayers[parts[1]] = (positionMix.asPlayers[parts[1]] ?? 0) + 1;
   }
 
-  // ---- 7. chart data (deterministic, selection reasons included) ---------
+  // ---- 8. chart data (deterministic, selection reasons included) ---------
   const evalCounts = new Map();
   for (const r of evalRows) {
     evalCounts.set(r.athlete_id, (evalCounts.get(r.athlete_id) ?? 0) + 1);
@@ -871,6 +897,12 @@ async function main() {
     const kurtNominal = m4 / (m2 * m2);
     return kurtNominal === 0 ? 0 : (skew * skew + 1) / kurtNominal;
   };
+  const careerOut = (c, aid) => ({
+    athlete_id: aid, player: c.player,
+    position: positionOf.get(aid) ?? c.position, teams: c.teams,
+    games: c.games, span: c.span, scores: c.scores, dates: c.dates,
+    cut: cutOf(c.scores), flags: c.flags,
+  });
   const picks = [];
   const pool = [...careers.entries()].filter(([aid]) => (evalCounts.get(aid) ?? 0) >= 30);
   const pick = (label, scoreOf, reason) => {
@@ -882,14 +914,6 @@ async function main() {
     }
     if (best) picks.push({ label, reason, ...careerOut(careers.get(best.aid), best.aid) });
   };
-  const careerOut = (c, aid) => ({
-    athlete_id: aid, player: c.player,
-    // the exact ESPN position when the lookup phase got it, else the
-    // first-game inference (which can mislabel a whole career)
-    position: positionOf.get(aid) ?? c.position, teams: c.teams,
-    games: c.games, span: c.span, scores: c.scores, dates: c.dates,
-    cut: cutOf(c.scores), flags: c.flags,
-  });
   pick("stable", (c) => -cvOf(c.scores),
     "lowest coefficient of variation of games-of-record DK points among players with >= 30 evaluations");
   pick("bimodal", (c) => bimodalityOf(c.scores),
@@ -919,82 +943,50 @@ async function main() {
     return best;
   })();
   if (regimeBest) {
-    const c = careers.get(regimeBest.aid);
     picks.push({
       label: "regime",
       reason: "largest flagged level shift (5-on-5 window two-sample t-test) among all players with >= 30 evaluations",
-      ...careerOut(c, regimeBest.aid),
+      ...careerOut(careers.get(regimeBest.aid), regimeBest.aid),
     });
   }
-  const scatterEvery = Math.max(1, Math.ceil(evaluations / 2000));
-  const scatter = evalRows
-    .filter((r) => r.contained !== "")
-    .filter((_, i) => i % scatterEvery === 0)
-    .map((r) => [r.actual, r.projection, r.low90, r.high90]);
   // the ~40-row doc sample: the most-evaluated player, first 40 evaluations
   const samplePlayerId = [...evalCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
   const docSample = samplePlayerId ? evalRows.filter((r) => r.athlete_id === samplePlayerId).slice(0, 40) : [];
   const docSamplePlayer = careers.get(samplePlayerId)?.player ?? null;
 
-  // ---- 8. outputs ----------------------------------------------------------
+  // ---- 9. outputs ---------------------------------------------------------
   const result = {
     generatedAt: new Date().toISOString(),
     config: {
       teams: TEAMS, seasonStart: SEASON_START, seasonEnd: SEASON_END,
       lowSampleN: LOW_SAMPLE_N,
-      factorsFed: ["isHome", "month", "opponent", "restDays", "regimeShifts"],
-      pRule: "P = the probability that the winning factor's high-side condition holds for the UPCOMING game, as the engine runs it: 1 when the condition holds, 0 when it does not, and the even-split floor (0.5) when no factor's state is known; projection = highMean x P + lowMean x (1-P)",
+      factorsFed: ["isHome", "month", "team", "opponent", "restDays", "regimeShifts"],
       scoringRubric: "DraftKings published rubric",
       dataPath: "ESPN team schedule -> event summary -> DraftKings points",
+      cacheDir: CACHE_DIR,
     },
-    definitions: {
-      gameOfRecord: "One completed game for one player in the dataset. Every game of record is written to the CSV; nothing is omitted.",
-      firstGameOfRecord: "A player's first game in the dataset: no earlier games, no cut, no projection. Recorded as information.",
-      earlierGames: "That player's completed games strictly before the target game's date, all seasons, sorted by date. earlier_n is their count.",
-      cut: "C = the largest DK-point value in the LOW half of the median split of the earlier games (odd counts put the middle game in the LOW half). This is how the two halves are formed - logistics, not a finding. It is never reported as a rate and it is NOT the definition of a boom.",
-      controlLimits: "The mean of the LOW half is the LOWER control limit; the mean of the HIGH half is the UPPER control limit (post-peel). The control limit range R = upper - lower is the width of the band: good players have tight limits, inconsistent players have wide ones. R is the yardstick - every comparison is measured in units of R.",
-      highScoringGame: "A game whose DK points are above that player's own average of the earlier games. Every boom is a high scoring game; a high scoring game is not necessarily a boom.",
-      boomGame: "BOOM = OUTLIER HIGH: a high scoring game that breaks ABOVE the upper control limit. The peaks that don't belong, on the high side.",
-      bustGame: "BUST = OUTLIER LOW: the mirror - below the lower control limit. The peaks that don't belong, on the low side.",
-      insideTheBand: "A game between the two control limits: neither a boom nor a bust.",
-      bandPosition: "(value - lower control limit) / R. Below 0 on a bust, above 1 on a boom, inside 0..1 otherwise. The model's position is where its projection sits in the band; the baseline's is where its plain average sits.",
-      baseline: "The plain prior-games average (arithmetic mean of the earlier games; no split, no factor, no weighting, no outlier removal), scored in the same band units as the model.",
-      direction: "Whether a side's projection sits above or below the band midpoint. Reported as each side's own pointing rate over the same rows - never against a fixed line.",
-      P: "The probability that the winning factor's high-side condition holds for the UPCOMING game, as the engine runs it: 1 when the condition holds, 0 when it does not, and the even-split floor (0.5) when no factor's state is known.",
-      containment: "For evaluations with an interval (earlier_n >= 4): same when the actual DK points fall inside the model's 90% interval, different otherwise.",
-      lowSampleAsterisk: "Every game with >=1 earlier game is evaluated; games under " + LOW_SAMPLE_N + " earlier games are flagged in sample_flag and are still evaluated.",
-    },
+    definitions: DEFINITIONS,
     coverage: {
       teams: TEAMS, seasons: SEASONS,
-      playersSeen, // players with >= 1 game of record
-      playersEvaluated: playerIds.length, // players with >= 1 evaluation
-      gamesOfRecord: evaluations + firstGames, // every completed player-game in the dataset
-      evaluations, // games with >= 1 earlier game (each carries a projection)
+      playersSeen,
+      playersEvaluated: playerIds.length,
+      gamesOfRecord: evaluations + firstGames,
+      evaluations,
       firstGamesOfRecord: firstGames,
       evaluationsLowSample: evalRows.filter((r) => r.earlier_n < LOW_SAMPLE_N).length,
       evaluationsFullSample: evalRows.filter((r) => r.earlier_n >= LOW_SAMPLE_N).length,
       eventsHeld: summariesHeld,
       eventsPlanned: events.size,
-      positionMix, // asEvaluations = evaluations per position; asPlayers = distinct players per position
-      perEra, perSeason,
+      positionMix,
+      perEra,
+      perSeason,
     },
-    controlLimits: overall, // headline: control limit range, outcome classes, band error and direction
-    eras: perEra,
-    seasons: perSeason,
-    modelPaths, factorUsage, pCounts,
+    census: overall,
+    factorUsage,
+    perPlayer: perPlayerRows,
+    actualsCheck,
     charts: {
       histogramPlayers: picks,
-      scatter: {
-        sampledEvery: scatterEvery,
-        points: scatter,
-        note: "1-in-" + scatterEvery + " deterministic sample of evaluations with an interval; x = actual DK points, y = projection, vertical segment = the model's 90% interval",
-      },
-      timeline: regimeBest
-        ? {
-            reason: "largest flagged level shift (5-on-5 window two-sample t-test) among all players with >= 30 evaluations",
-            ...careerOut(careers.get(regimeBest.aid), regimeBest.aid),
-          }
-        : null,
       docSample: { player: docSamplePlayer, athlete_id: samplePlayerId ?? null, rows: docSample },
     },
     requestCount: REQUESTS,
@@ -1004,39 +996,25 @@ async function main() {
     runtimeSeconds: Math.round((Date.now() - startedAt) / 1000),
   };
 
-  // release the big intermediates before writing
-  careers.clear();
-  evalRows.length = 0;
-
   mkdirSync(dirname(OUT_CSV), { recursive: true });
   writeFileSync(OUT_CSV, csvLines.join("\n"));
   console.log("Wrote " + OUT_CSV + " (" + (csvLines.length - 1) + " rows)");
-  writeFileSync(OUT_JSON, JSON.stringify(result, null, 1));
+  writeFileSync(OUT_JSON, JSON.stringify(result, null, 2));
   console.log("Wrote " + OUT_JSON);
-
-  // ---- 9. console headline ------------------------------------------------
-  const blk = overall; // same object as the control-limits headline in the JSON
-  console.log("");
-  console.log("=== HEADLINE: control limits and predictability (the split is logistics) ===");
-  console.log("evaluations with control limits: " + blk.withControlLimits + " of " + blk.evaluations);
-  console.log("outcome classes - boom (outlier high): " + blk.outcomeClasses.boomOutlierHigh +
-    " | bust (outlier low): " + blk.outcomeClasses.bustOutlierLow +
-    " | inside the band: " + blk.outcomeClasses.insideTheBand);
-  console.log("control limit range R (DK points): median " + round(blk.controlLimitRange.median) +
-    ", mean " + round(blk.controlLimitRange.mean) +
-    ", p10 " + round(blk.controlLimitRange.p10) + ", p90 " + round(blk.controlLimitRange.p90));
-  console.log("band error (squared error, in R units): model " + round(blk.bandError.model) +
-    " | baseline " + round(blk.bandError.baseline));
-  console.log("band correlation with the actual: model " + round(blk.bandCorrelation.model) +
-    " | baseline " + round(blk.bandCorrelation.baseline));
-  console.log("model direction - up on boom games: " + blk.direction.model.boom.pointsUp +
-    " of " + blk.direction.model.boom.games + " | down on bust games: " +
-    blk.direction.model.bust.pointsDown + " of " + blk.direction.model.bust.games);
-  console.log("baseline direction - up on boom games: " + blk.direction.baseline.boom.pointsUp +
-    " of " + blk.direction.baseline.boom.games + " | down on bust games: " +
-    blk.direction.baseline.bust.pointsDown + " of " + blk.direction.baseline.bust.games);
-  console.log("containment (model 90% interval, n=" + blk.containment.evaluationsWithInterval + "): " + blk.containment.rate + "% same");
-  console.log("runtime " + result.runtimeSeconds + "s, requests " + REQUESTS + ", failures " + FAILURES.length);
+  console.log("calls: " + JSON.stringify(overall.calls));
+  console.log("outcome classes: " + JSON.stringify(overall.outcomeClasses));
+  console.log("sameness - one population: " + overall.onePopulation +
+    " | two populations: " + overall.twoPopulations);
+  console.log("high half multimodal: " + overall.highMultimodal +
+    " | low half multimodal: " + overall.lowMultimodal);
+  if (actualsCheck) {
+    console.log("actuals check: compared " + actualsCheck.comparedRows +
+      ", differing " + actualsCheck.differingRows +
+      ", missing " + actualsCheck.missingRows +
+      " (previous run held " + actualsCheck.previousCsvRows + " rows)");
+  }
+  console.log("runtime " + result.runtimeSeconds + "s, requests " + REQUESTS +
+    ", failures " + FAILURES.length);
 }
 
 main().catch((err) => {

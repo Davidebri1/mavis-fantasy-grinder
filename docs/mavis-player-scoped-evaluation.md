@@ -1,5 +1,10 @@
 # The per-player evaluation: Dave's method, run as written
 
+> **SUPERSEDED 2026-11-26 (mavis).** This is the 2026-11-23 per-player evaluation. It is kept as a dated record of the framing it measured and it is **not** the current evaluation. The current evaluation is [`docs/mavis-categorical-evaluation.md`](mavis-categorical-evaluation.md), which runs the method in `docs/DFS Projection Model.md` as written: one population per player, one metric (did this projection equal this actual on this day), each player's own no-skill reference, and significance in its own section with no p-value beside a rate.
+>
+> On 2026-11-26 the owner rejected this document framing - factors and clusters were accepted or rejected, a coefficient was reported as a variable, and a p-value sat beside a hit rate - and the engine formulas were rewritten to match the method document. Every figure below is dated to 2026-11-23 and must not be quoted as current. Nothing below has been rewritten.
+
+
 Built by mavis. Date: 2026-11-23. The engine under test is `frontend/react/src/lib/dave-projection.ts`. The method is `docs/DFS Projection Model.md`, verbatim, and this evaluation runs it as written.
 
 **This document supersedes `docs/mavis-projection-evaluation.md`** (the 2026-11-22 control-limit rebuild). That file stays in the repository as a dated record of the framing it measured; it is not the current evaluation, and none of its numbers should be quoted as current.

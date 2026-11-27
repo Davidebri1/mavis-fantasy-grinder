@@ -1,4 +1,26 @@
 #!/usr/bin/env node
+
+/* ===========================================================================
+ * SUPERSEDED - 2026-11-26 (mavis)
+ *
+ * This script belongs to the evaluation framing Dave rejected on 2026-11-26:
+ * factors and clusters were accepted or rejected, a coefficient was reported
+ * as a variable ("P=1"), a p value was printed beside a hit rate, and the
+ * framing measured pooled data against control-limit bands.
+ *
+ * The rejection was of the framing, not of this file. The file stays in the
+ * repository as a dated record of that method and is not part of the current
+ * evaluation.
+ *
+ * Its input is pinned to the pre-correction harness JSON so it still runs
+ * against the data it was written for. The current method is:
+ *   scripts/mavis-categorical-evaluation.mjs   - the analysis
+ *   scripts/mavis-categorical-charts.mjs       - the charts
+ *   docs/mavis-categorical-evaluation.md       - the write-up
+ *
+ * Point it at another file with MAVIS_PRE_JSON.
+ * =========================================================================== */
+
 /**
  * mavis-evaluation-charts.mjs - renders the CONTROL LIMIT evaluation charts
  * as SVG artifacts. matplotlib is not installed, and the spec says install
@@ -35,16 +57,24 @@
  * USAGE: node scripts/mavis-evaluation-charts.mjs
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { projectDave } from "./dave-port.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const IN_EVAL = join(HERE, "..", ".tmp-audit", "projection-evaluation.json");
+const IN_EVAL = process.env.MAVIS_PRE_JSON || join(HERE, "..", ".tmp-audit", "projection-evaluation-pre-correction.json");
 const IN_LIMITS = join(HERE, "..", ".tmp-audit", "projection-control-limits.json");
 const IN_SIG = join(HERE, "..", ".tmp-audit", "projection-control-limit-significance.json");
 const OUT_DIR = join(HERE, "..", "..", "..", "docs", "shots");
+if (!existsSync(IN_EVAL)) {
+  console.error("This script reads the PRE-CORRECTION harness JSON. The current projection-evaluation.json is the new categorical format and this script cannot read it.");
+  console.error("Regenerate the old one with:");
+  console.error("  git -C <repo> show 14c3b49:frontend/react/scripts/mavis-projection-evaluation.mjs > .tmp-audit/mavis-projection-evaluation-pre-correction.mjs");
+  console.error("  node .tmp-audit/mavis-projection-evaluation-pre-correction.mjs");
+  console.error("then copy the generated projection-evaluation.json to projection-evaluation-pre-correction.json");
+  process.exit(2);
+}
 
 const GRAY_LOW = "#c3cad3";
 const GRAY_HIGH = "#697382";

@@ -1,3 +1,25 @@
+/* ===========================================================================
+ * SUPERSEDED - 2026-11-26 (mavis)
+ *
+ * This script belongs to the evaluation framing Dave rejected on 2026-11-26:
+ * factors and clusters were accepted or rejected, a coefficient was reported
+ * as a variable ("P=1"), a p value was printed beside a hit rate, and the
+ * framing measured pooled data against control-limit bands.
+ *
+ * The rejection was of the framing, not of this file. The file stays in the
+ * repository as a dated record of that method and is not part of the current
+ * evaluation.
+ *
+ * Its input is pinned to the pre-correction CSV so it still runs against the
+ * data it was written for. The current method is:
+ *   scripts/mavis-categorical-evaluation.mjs   - the analysis
+ *   scripts/mavis-categorical-charts.mjs       - the charts
+ *   docs/mavis-categorical-evaluation.md       - the write-up
+ *
+ * Point it at another file with MAVIS_PRE_CSV, or MAVIS_PRE_JSON where the
+ * input is the harness JSON.
+ * =========================================================================== */
+
 /**
  * mavis-player-scoped-audit.mjs
  *
@@ -19,7 +41,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..", "..");
-const CSV = path.join(REPO, "frontend", "react", ".tmp-audit", "projection-evaluation.csv");
+const CSV = process.env.MAVIS_PRE_CSV || path.join(REPO, "frontend", "react", ".tmp-audit", "projection-evaluation-pre-correction.csv");
 const JSON_IN = path.join(REPO, "frontend", "react", ".tmp-audit", "player-scoped-evaluation.json");
 
 function parseCsv(text) {
